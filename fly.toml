@@ -1,5 +1,4 @@
 # fly.toml — KH Builds
-# Modifica "app" con il nome scelto durante "fly launch"
 
 app            = 'kh-builds'
 primary_region = 'ams'
