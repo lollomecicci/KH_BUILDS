@@ -1,6 +1,7 @@
 local-backend/node_modules/
 local-backend/.env
 local-backend/kh_builds.db
+setup-github.sh
 
 *.log
 *.tmp
