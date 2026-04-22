@@ -8,6 +8,7 @@ on:
       - 'local-backend/**'
       - 'Dockerfile'
       - 'fly.toml'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   deploy:
