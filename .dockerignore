@@ -1,0 +1,6 @@
+local-backend/node_modules
+local-backend/.env
+local-backend/kh_builds.db
+local-backend/service-account.json
+.git
+*.xlsx

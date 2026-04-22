@@ -1,0 +1,28 @@
+# fly.toml — KH Builds
+# Modifica "app" con il nome scelto durante "fly launch"
+
+app            = 'kh-builds'
+primary_region = 'ams'
+
+[build]
+
+[http_service]
+  internal_port        = 3000
+  force_https          = true
+  auto_stop_machines   = 'stop'
+  auto_start_machines  = true
+  min_machines_running = 0
+  processes            = ['app']
+
+  [http_service.concurrency]
+    type       = 'requests'
+    soft_limit = 50
+    hard_limit = 100
+
+[[vm]]
+  size   = 'shared-cpu-1x'
+  memory = '256mb'
+
+[mounts]
+  source      = 'kh_data'
+  destination = '/app/data'

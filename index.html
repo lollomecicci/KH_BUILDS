@@ -1,0 +1,1887 @@
+﻿<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KH Builds — Database Build Knighthood</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- GSAP 3 (animazioni) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+
+  <!-- particles.js (embers di sfondo) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/particles.js/2.0.0/particles.min.js" defer></script>
+
+  <style>
+    /* ============================================================
+       DESIGN SYSTEM
+    ============================================================ */
+    :root {
+      --bg:        #08080f;
+      --bg2:       #0f0f1c;
+      --bg3:       #171728;
+      --card:      #111120;
+      --card-h:    #181834;
+      --border:    #252540;
+      --border-h:  #383860;
+
+      --gold:      #c8941a;
+      --gold-h:    #f0c040;
+      --gold-d:    #6a4c00;
+      --gold-bg:   rgba(200,148,26,.1);
+      --gold-glow: rgba(200,148,26,.35);
+
+      --text:      #e0d8f0;
+      --text2:     #8078a0;
+      --text3:     #3e3860;
+
+      --arena:     #e53e3e;
+      --arena-bg:  rgba(229,62,62,.1);
+      --arena-glow:rgba(229,62,62,.22);
+      --pve:       #38a169;
+      --pve-bg:    rgba(56,161,105,.1);
+      --pve-glow:  rgba(56,161,105,.22);
+      --war:       #dd6b20;
+      --war-bg:    rgba(221,107,32,.1);
+      --war-glow:  rgba(221,107,32,.22);
+      --rift:      #7c5ce4;
+      --rift-bg:   rgba(124,92,228,.1);
+      --rift-glow: rgba(124,92,228,.22);
+
+      --success:   #38a169;
+      --error:     #e53e3e;
+
+      --radius-sm: 6px;
+      --radius:    12px;
+      --radius-lg: 18px;
+      --shadow:    0 6px 30px rgba(0,0,0,.6);
+      --shadow-lg: 0 12px 60px rgba(0,0,0,.8);
+      --transition:.18s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* Sfondo animato */
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: linear-gradient(-45deg, #08080f, #0c080f, #08080f, #080c10);
+      background-size: 400% 400%;
+      animation: bg-breathe 18s ease infinite;
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    @keyframes bg-breathe {
+      0%,100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+
+    /* Particelle ember */
+    #particles-js {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Vignette dark ai bordi */
+    #vignette {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.75) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Tutto il contenuto sopra particles + vignette */
+    .site-header, .stats-bar, .filter-bar, .main, .fab, .toast-container { position: relative; z-index: 2; }
+    .modal-overlay { z-index: 300; }
+
+    /* ============================================================
+       ANIMAZIONI CSS
+    ============================================================ */
+    @keyframes glow-logo {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(200,148,26,.5)); }
+      50%      { filter: drop-shadow(0 0 20px rgba(200,148,26,.9)) drop-shadow(0 0 40px rgba(200,148,26,.4)); }
+    }
+
+    @keyframes shimmer-text {
+      to { background-position: -200% center; }
+    }
+
+    @keyframes badge-shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    @keyframes fab-pulse {
+      0%,100% { box-shadow: 0 4px 20px var(--gold-glow); }
+      50%      { box-shadow: 0 4px 36px rgba(200,148,26,.8), 0 0 0 12px rgba(200,148,26,.07); }
+    }
+
+    @keyframes header-line {
+      0%,100% { opacity: .5; }
+      50%      { opacity: 1; }
+    }
+
+    @keyframes float-icon {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-5px); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes forge-ring {
+      0%   { transform: rotate(0deg); box-shadow: 0 0 6px var(--gold-glow); }
+      50%  { box-shadow: 0 0 20px var(--gold-glow), 0 0 40px rgba(200,148,26,.2); }
+      100% { transform: rotate(360deg); box-shadow: 0 0 6px var(--gold-glow); }
+    }
+
+    @keyframes score-pop {
+      0%  { transform: scale(1); }
+      40% { transform: scale(1.4); }
+      100%{ transform: scale(1); }
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ============================================================
+       HEADER
+    ============================================================ */
+    .site-header {
+      background: rgba(9,9,20,.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      overflow: hidden;
+    }
+
+    /* Linea oro animata in cima all'header */
+    .site-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--gold-d) 20%, var(--gold) 40%, var(--gold-h) 50%, var(--gold) 60%, var(--gold-d) 80%, transparent 100%);
+      animation: header-line 3s ease-in-out infinite;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      gap: 16px;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-logo {
+      font-size: 32px;
+      line-height: 1;
+      animation: glow-logo 2.5s ease-in-out infinite, float-icon 3s ease-in-out infinite;
+      display: block;
+      cursor: default;
+    }
+
+    .header-titles h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      line-height: 1.1;
+      background: linear-gradient(90deg, #c8941a 0%, #f0c040 35%, #ffdc60 50%, #f0c040 65%, #c8941a 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer-text 4s linear infinite;
+    }
+
+    .header-titles span {
+      font-size: .72rem;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Ornamento decorativo centrale */
+    .header-ornament {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--gold-d);
+      font-size: .9rem;
+      letter-spacing: .1em;
+      opacity: .7;
+    }
+    .header-ornament::before,
+    .header-ornament::after {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-d));
+    }
+    .header-ornament::after {
+      background: linear-gradient(90deg, var(--gold-d), transparent);
+    }
+
+    /* ============================================================
+       BUTTONS
+    ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 20px;
+      border-radius: var(--radius-sm);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      letter-spacing: .05em;
+      text-decoration: none;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Shine effect on hover */
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+      transition: left .4s ease;
+    }
+    .btn:hover::after { left: 150%; }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #b07a10 0%, #d4a017 40%, #f0c040 60%, #d4a017 80%, #b07a10 100%);
+      background-size: 200% auto;
+      color: #08080f;
+      box-shadow: 0 2px 12px rgba(200,148,26,.3);
+      animation: shimmer-text 6s linear infinite;
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(200,148,26,.5); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border-h);
+    }
+    .btn-outline:hover { color: var(--text); border-color: var(--gold-d); background: var(--gold-bg); }
+
+    .btn-sm { padding: 5px 13px; font-size: .85rem; }
+
+    /* ============================================================
+       STATS BAR
+    ============================================================ */
+    .stats-bar {
+      background: rgba(10,10,22,.8);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+    }
+
+    .stats-inner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 2px 0;
+      scrollbar-width: none;
+    }
+    .stats-inner::-webkit-scrollbar { display: none; }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: .82rem;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+    .stat-chip:hover { border-color: var(--border-h); }
+    .stat-chip .num {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Cinzel', serif;
+    }
+    .stat-chip.total .num  { color: var(--gold); }
+    .stat-chip.arena .num  { color: var(--arena); }
+    .stat-chip.pve   .num  { color: var(--pve); }
+    .stat-chip.war   .num  { color: var(--war); }
+    .stat-chip.rift  .num  { color: var(--rift); }
+
+    /* ============================================================
+       FILTER BAR
+    ============================================================ */
+    .filter-bar {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,8,15,.6);
+    }
+
+    .filter-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 3px;
+      background: rgba(10,10,20,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+
+    .tab {
+      padding: 6px 15px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      letter-spacing: .05em;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--gold);
+      background: var(--bg3);
+      box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--gold-d);
+    }
+    .tab[data-mode=arena].active { color: var(--arena); box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--arena); }
+    .tab[data-mode=pve].active   { color: var(--pve);   box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--pve);   }
+    .tab[data-mode=war].active   { color: var(--war);   box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--war);   }
+    .tab[data-mode=rift].active  { color: var(--rift);  box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--rift);  }
+
+    .filter-select {
+      background: rgba(10,10,20,.8);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: var(--transition);
+    }
+    .filter-select:focus { border-color: var(--gold-d); }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 200px;
+      max-width: 360px;
+      position: relative;
+    }
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text3);
+      pointer-events: none;
+      font-size: .9rem;
+    }
+    .search-input {
+      width: 100%;
+      background: rgba(10,10,20,.8);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px 7px 34px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem;
+      outline: none;
+      transition: var(--transition);
+    }
+    .search-input:focus { border-color: var(--gold-d); box-shadow: 0 0 0 2px var(--gold-bg); }
+    .search-input::placeholder { color: var(--text3); }
+
+    .results-count { margin-left: auto; font-size: .82rem; color: var(--text3); white-space: nowrap; }
+
+    /* ============================================================
+       MAIN CONTENT
+    ============================================================ */
+    .main { padding: 30px 0 80px; }
+
+    .builds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 18px;
+    }
+
+    /* ============================================================
+       BUILD CARD
+    ============================================================ */
+    .build-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+      /* Bordo colorato in cima — modalità */
+      border-top: 2px solid var(--border);
+    }
+
+    /* Bordo superiore colorato per modalità */
+    .build-card[data-mode=arena] { border-top-color: var(--arena); }
+    .build-card[data-mode=pve]   { border-top-color: var(--pve);   }
+    .build-card[data-mode=war]   { border-top-color: var(--war);   }
+    .build-card[data-mode=rift]  { border-top-color: var(--rift);  }
+
+    /* Glow hover per modalità */
+    .build-card:hover { transform: translateY(-3px); background: var(--card-h); }
+    .build-card[data-mode=arena]:hover { border-color: rgba(229,62,62,.5);  box-shadow: 0 0 28px var(--arena-glow), var(--shadow); }
+    .build-card[data-mode=pve]:hover   { border-color: rgba(56,161,105,.5); box-shadow: 0 0 28px var(--pve-glow),   var(--shadow); }
+    .build-card[data-mode=war]:hover   { border-color: rgba(221,107,32,.5); box-shadow: 0 0 28px var(--war-glow),   var(--shadow); }
+    .build-card[data-mode=rift]:hover  { border-color: rgba(124,92,228,.5); box-shadow: 0 0 28px var(--rift-glow),  var(--shadow); }
+
+    /* Riflesso luminoso che scorre sulla card */
+    .build-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -80%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.03), transparent);
+      transition: left .6s ease;
+      pointer-events: none;
+    }
+    .build-card:hover::before { left: 130%; }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* Mode badge con shimmer */
+    .mode-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 11px;
+      border-radius: 100px;
+      font-size: .7rem;
+      font-weight: 700;
+      font-family: 'Cinzel', serif;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      background-size: 200% auto;
+      animation: badge-shimmer 5s linear infinite;
+    }
+    .mode-badge.arena { background: linear-gradient(90deg, var(--arena-bg) 0%, rgba(229,62,62,.25) 50%, var(--arena-bg) 100%); color: var(--arena); border: 1px solid rgba(229,62,62,.5); }
+    .mode-badge.pve   { background: linear-gradient(90deg, var(--pve-bg) 0%, rgba(56,161,105,.25) 50%, var(--pve-bg) 100%);   color: var(--pve);   border: 1px solid rgba(56,161,105,.5); }
+    .mode-badge.war   { background: linear-gradient(90deg, var(--war-bg) 0%, rgba(221,107,32,.25) 50%, var(--war-bg) 100%);   color: var(--war);   border: 1px solid rgba(221,107,32,.5); }
+    .mode-badge.rift  { background: linear-gradient(90deg, var(--rift-bg) 0%, rgba(124,92,228,.25) 50%, var(--rift-bg) 100%); color: var(--rift);  border: 1px solid rgba(124,92,228,.5); }
+
+    .score-badge {
+      font-size: .82rem;
+      font-weight: 700;
+      font-family: 'Cinzel', serif;
+      padding: 2px 9px;
+      border-radius: 100px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .score-badge.pos { color: var(--pve);   border-color: rgba(56,161,105,.3); }
+    .score-badge.neg { color: var(--arena); border-color: rgba(229,62,62,.3); }
+    .score-badge.neu { color: var(--text2); }
+
+    .card-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .88rem;
+      color: var(--text2);
+    }
+    .info-icon { flex-shrink: 0; width: 16px; text-align: center; }
+    .info-val  { color: var(--text); font-weight: 600; }
+
+    .card-desc {
+      font-size: .85rem;
+      color: var(--text2);
+      line-height: 1.45;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      font-style: italic;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .vote-row { display: flex; align-items: center; gap: 5px; }
+
+    .vote-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .vote-btn:hover:not(:disabled) { border-color: var(--border-h); color: var(--text); background: rgba(255,255,255,.07); }
+    .vote-btn.up.voted   { background: rgba(56,161,105,.12);  border-color: rgba(56,161,105,.5);  color: var(--pve);   }
+    .vote-btn.down.voted { background: rgba(229,62,62,.12);   border-color: rgba(229,62,62,.5);   color: var(--arena); }
+    .vote-btn:disabled   { opacity: .45; cursor: not-allowed; }
+
+    /* ============================================================
+       STATES
+    ============================================================ */
+    .state-box {
+      text-align: center;
+      padding: 72px 20px;
+      color: var(--text2);
+    }
+    .state-box .state-icon { font-size: 3rem; display: block; margin-bottom: 20px; }
+    .state-box h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .state-box p { font-size: .9rem; max-width: 380px; margin: 0 auto; line-height: 1.5; }
+    .state-box code {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .85rem;
+      color: var(--gold);
+    }
+
+    /* Loader a tema Forge */
+    .forge-loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .forge-sword {
+      font-size: 2.4rem;
+      animation: float-icon 1.4s ease-in-out infinite;
+    }
+    .forge-ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-right-color: var(--gold-h);
+      animation: forge-ring 1s linear infinite;
+    }
+
+    /* ============================================================
+       PAGINATION
+    ============================================================ */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding-top: 36px;
+    }
+
+    .page-btn {
+      min-width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      background: rgba(10,10,20,.8);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      padding: 0 10px;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--border-h); color: var(--text); }
+    .page-btn.active { background: var(--gold-bg); border-color: var(--gold-d); color: var(--gold); box-shadow: 0 0 10px var(--gold-bg); }
+    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ============================================================
+       FAB
+    ============================================================ */
+    .fab {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: linear-gradient(135deg, #b07a10, #d4a017, #f0c040, #d4a017, #b07a10);
+      background-size: 200% auto;
+      color: #08080f;
+      border: none;
+      border-radius: 100px;
+      padding: 15px 24px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      cursor: pointer;
+      animation: fab-pulse 2.8s ease-in-out infinite, shimmer-text 5s linear infinite;
+      transition: transform .2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 50;
+    }
+    .fab:hover { transform: translateY(-3px) scale(1.04); }
+
+    /* ============================================================
+       MODALS
+    ============================================================ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 300;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: linear-gradient(160deg, #151525 0%, #0f0f1e 100%);
+      border: 1px solid var(--border-h);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 660px;
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(200,148,26,.08);
+      margin: auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Linea dorata in cima al modal */
+    .modal::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-d), var(--gold), var(--gold-d), transparent);
+    }
+
+    .modal-detail { max-width: 740px; }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 26px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--gold), var(--gold-h));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .modal-close {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+    .modal-close:hover { color: var(--text); border-color: var(--border-h); background: rgba(255,255,255,.09); }
+
+    .modal-body { padding: 26px; }
+
+    /* ============================================================
+       FORM
+    ============================================================ */
+    .form-section { margin-bottom: 26px; }
+
+    .section-label {
+      font-family: 'Cinzel', serif;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold-d), transparent);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: .82rem; color: var(--text2); font-weight: 600; letter-spacing: .04em; }
+    .form-group .req { color: var(--arena); }
+
+    .form-input, .form-select, .form-textarea {
+      background: rgba(10,10,20,.8);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 9px 13px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--gold-d);
+      box-shadow: 0 0 0 2px var(--gold-bg), 0 0 10px rgba(200,148,26,.1);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+    .form-textarea { resize: vertical; min-height: 90px; }
+    .form-select option { background: #0f0f1e; }
+    .field-hint { font-size: .76rem; color: var(--text3); }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ============================================================
+       DETAIL VIEW
+    ============================================================ */
+    .detail-hero { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+    .detail-title { font-family: 'Cinzel', serif; font-size: 1.35rem; font-weight: 700; color: var(--text); margin: 8px 0 6px; }
+    .detail-meta  { font-size: .85rem; color: var(--text2); display: flex; gap: 14px; flex-wrap: wrap; }
+
+    .detail-section { margin-bottom: 22px; }
+
+    .equip-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 8px;
+    }
+    .equip-slot {
+      background: rgba(10,10,22,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 13px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: .88rem;
+      transition: var(--transition);
+    }
+    .equip-slot:hover { border-color: var(--border-h); background: var(--bg3); }
+    .equip-slot.empty { opacity: .35; }
+    .slot-icon  { font-size: 1.1em; flex-shrink: 0; }
+    .slot-label { color: var(--text3); font-size: .72rem; display: block; margin-bottom: 1px; letter-spacing: .04em; }
+    .slot-val   { color: var(--text); font-weight: 600; }
+
+    .heroes-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hero-chip {
+      background: rgba(10,10,22,.7);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 16px;
+      font-size: .88rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+    .hero-chip:hover { border-color: var(--border-h); }
+
+    .text-block {
+      background: rgba(10,10,22,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 16px;
+      font-size: .9rem;
+      color: var(--text);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .detail-vote-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 18px 0 0;
+      border-top: 1px solid var(--border);
+    }
+    .vote-btn-lg { padding: 10px 26px; font-size: 1rem; border-radius: var(--radius-sm); }
+
+    /* ============================================================
+       TOAST
+    ============================================================ */
+    .toast-container {
+      position: fixed;
+      bottom: 96px;
+      right: 28px;
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: rgba(20,20,38,.96);
+      border: 1px solid var(--border-h);
+      border-radius: var(--radius-sm);
+      padding: 11px 18px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      animation: toast-in .25s ease;
+    }
+    .toast.success { border-color: rgba(56,161,105,.5);  color: #9ae6b4; }
+    .toast.error   { border-color: rgba(229,62,62,.5);   color: #fc8181; }
+    @keyframes toast-in {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 640px) {
+      .header-inner    { padding: 12px 16px; }
+      .header-titles h1{ font-size: 1.1rem; }
+      .header-ornament { display: none; }
+      .filter-inner    { gap: 8px; }
+      .mode-tabs       { overflow-x: auto; scrollbar-width: none; }
+      .mode-tabs::-webkit-scrollbar { display: none; }
+      .tab             { padding: 5px 10px; font-size: .82rem; }
+      .builds-grid     { grid-template-columns: 1fr; }
+      .form-grid       { grid-template-columns: 1fr; }
+      .form-grid .full { grid-column: 1; }
+      .fab             { bottom: 16px; right: 16px; padding: 13px 18px; font-size: .9rem; }
+      .search-wrap     { max-width: 100%; }
+    }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Embers particles -->
+<div id="particles-js" aria-hidden="true"></div>
+<!-- Vignette scuro ai bordi -->
+<div id="vignette" aria-hidden="true"></div>
+
+<!-- ============================================================
+     HEADER
+============================================================ -->
+<header class="site-header">
+  <div class="header-inner container">
+
+    <div class="header-brand">
+      <span class="header-logo" aria-hidden="true">⚔</span>
+      <div class="header-titles">
+        <h1>KH Builds</h1>
+        <span>Database Build Knighthood</span>
+      </div>
+    </div>
+
+    <div class="header-ornament" aria-hidden="true">◆</div>
+
+    <button class="btn btn-gold" onclick="openCreateModal()">
+      ＋ Nuova Build
+    </button>
+
+  </div>
+</header>
+
+<!-- ============================================================
+     STATS BAR
+============================================================ -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-inner">
+      <div class="stat-chip total">
+        <span class="num" id="stat-total">—</span>
+        build totali
+      </div>
+      <div class="stat-chip arena">
+        <span class="num" id="stat-arena">—</span>
+        Arena
+      </div>
+      <div class="stat-chip pve">
+        <span class="num" id="stat-pve">—</span>
+        PvE
+      </div>
+      <div class="stat-chip war">
+        <span class="num" id="stat-war">—</span>
+        War
+      </div>
+      <div class="stat-chip rift">
+        <span class="num" id="stat-rift">—</span>
+        Rift
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     FILTER BAR
+============================================================ -->
+<div class="filter-bar">
+  <div class="container filter-inner">
+
+    <div class="mode-tabs" id="mode-tabs">
+      <button class="tab active" data-mode="all">Tutte</button>
+      <button class="tab" data-mode="arena">Arena</button>
+      <button class="tab" data-mode="pve">PvE</button>
+      <button class="tab" data-mode="war">War</button>
+      <button class="tab" data-mode="rift">Rift</button>
+    </div>
+
+    <select class="filter-select" id="sort-select">
+      <option value="votes">✦ Migliori</option>
+      <option value="newest">◆ Più recenti</option>
+      <option value="upvotes">▲ Più votate</option>
+      <option value="oldest">◇ Meno recenti</option>
+    </select>
+
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input"
+             placeholder="Cerca build, armi, eroi..." autocomplete="off" />
+    </div>
+
+    <span class="results-count" id="results-count"></span>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN
+============================================================ -->
+<main class="main">
+  <div class="container">
+    <div id="state-box"></div>
+    <div class="builds-grid" id="builds-grid"></div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</main>
+
+<!-- FAB -->
+<button class="fab" onclick="openCreateModal()" aria-label="Nuova build">
+  ＋ Nuova Build
+</button>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<!-- ============================================================
+     MODAL — CREA BUILD
+============================================================ -->
+<div class="modal-overlay" id="create-overlay" onclick="overlayClick(event,'create-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚔ Nuova Build</h2>
+      <button class="modal-close" onclick="closeCreateModal()" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="create-form" onsubmit="submitBuild(event)">
+
+        <div class="form-section">
+          <div class="section-label">Info Base</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Nome Build <span class="req">*</span></label>
+              <input type="text" id="f-title" class="form-input"
+                     placeholder="Es: Build Arena Top 1%" maxlength="100" required />
+            </div>
+            <div class="form-group">
+              <label>Modalità <span class="req">*</span></label>
+              <select id="f-mode" class="form-select" required>
+                <option value="">Seleziona...</option>
+                <option value="arena">⚔ Arena</option>
+                <option value="pve">🛡 PvE</option>
+                <option value="war">🔥 War</option>
+                <option value="rift">✨ Rift</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Autore</label>
+              <input type="text" id="f-author" class="form-input"
+                     placeholder="Il tuo nome (opzionale)" maxlength="50" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">⚔ Equipaggiamento</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Arma <span class="req">*</span></label>
+              <input type="text" id="f-weapon" class="form-input"
+                     placeholder="Es: Spada del Caos (Leggendaria)" maxlength="100" required />
+            </div>
+            <div class="form-group">
+              <label>Elmo</label>
+              <input type="text" id="f-helmet" class="form-input" placeholder="Nome elmo" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Corazza</label>
+              <input type="text" id="f-chest" class="form-input" placeholder="Nome corazza" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Guanti</label>
+              <input type="text" id="f-gloves" class="form-input" placeholder="Nome guanti" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Stivali</label>
+              <input type="text" id="f-boots" class="form-input" placeholder="Nome stivali" maxlength="100" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">👥 Eroi</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Eroe 1</label>
+              <input type="text" id="f-hero1" class="form-input" placeholder="Nome eroe" maxlength="50" />
+            </div>
+            <div class="form-group">
+              <label>Eroe 2</label>
+              <input type="text" id="f-hero2" class="form-input" placeholder="Nome eroe" maxlength="50" />
+            </div>
+            <div class="form-group full">
+              <label>Eroe 3</label>
+              <input type="text" id="f-hero3" class="form-input" placeholder="Nome eroe" maxlength="50" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">✨ Charm e Note</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Charm</label>
+              <input type="text" id="f-charms" class="form-input"
+                     placeholder="Es: Charm del Fuoco, Charm della Luna" maxlength="200" />
+              <span class="field-hint">Separali con virgola</span>
+            </div>
+            <div class="form-group full">
+              <label>Descrizione / Strategia</label>
+              <textarea id="f-desc" class="form-textarea" rows="4" maxlength="1000"
+                        placeholder="Spiega la strategia, quando usarla, punti di forza e debolezza..."></textarea>
+              <span class="field-hint" id="desc-counter">0 / 1000</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Annulla</button>
+          <button type="submit" class="btn btn-gold" id="submit-btn">⚔ Salva Build</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — DETTAGLIO
+============================================================ -->
+<div class="modal-overlay" id="detail-overlay" onclick="overlayClick(event,'detail-overlay')">
+  <div class="modal modal-detail">
+    <div class="modal-header">
+      <h2 id="detail-modal-title">Dettaglio Build</h2>
+      <button class="modal-close" onclick="closeDetailModal()" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPT
+============================================================ -->
+<script>
+'use strict';
+
+// ============================================================
+// CONFIGURAZIONE
+// ============================================================
+const IS_LOCAL = ['localhost','127.0.0.1'].includes(location.hostname);
+const IS_GAS   = typeof google !== 'undefined' && typeof google.script !== 'undefined';
+// In produzione (Fly.io) le API sono sullo stesso origin → path relativo
+const API_BASE = IS_GAS ? null : (IS_LOCAL ? 'http://localhost:3000/api' : '/api');
+const IS_CONFIGURED = IS_GAS || Boolean(API_BASE);
+
+// ============================================================
+// GSAP — Animazioni
+// ============================================================
+const Anim = {
+  _ok() { return typeof gsap !== 'undefined'; },
+
+  header() {
+    if (!this._ok()) return;
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    tl.fromTo('.site-header', { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: .6 })
+      .fromTo('.stats-bar',   { opacity: 0 },          { opacity: 1, duration: .45 }, '-.2')
+      .fromTo('.filter-bar',  { y: -8, opacity: 0 },   { y: 0, opacity: 1, duration: .4 }, '-.25')
+      .fromTo('.fab',         { scale: 0, opacity: 0 },{ scale: 1, opacity: 1, duration: .55, ease: 'back.out(2)' }, '-.1');
+  },
+
+  cards(grid) {
+    if (!this._ok()) return;
+    const cards = grid.querySelectorAll('.build-card');
+    if (!cards.length) return;
+    gsap.fromTo(cards,
+      { y: 28, opacity: 0, scale: .97 },
+      { y: 0,  opacity: 1, scale: 1,
+        stagger: .055, duration: .38, ease: 'power2.out', clearProps: 'transform,opacity' }
+    );
+  },
+
+  modalOpen(overlay) {
+    if (!this._ok()) return;
+    const modal = overlay.querySelector('.modal');
+    gsap.fromTo(modal,
+      { scale: .88, y: 24, opacity: 0 },
+      { scale: 1,   y: 0,  opacity: 1, duration: .42, ease: 'back.out(1.8)', clearProps: 'all' }
+    );
+  },
+
+  modalClose(overlay, cb) {
+    if (!this._ok()) { cb(); return; }
+    const modal = overlay.querySelector('.modal');
+    gsap.to(modal, { scale: .94, y: 12, opacity: 0, duration: .2, ease: 'power2.in',
+      onComplete: () => { gsap.set(modal, { clearProps: 'all' }); cb(); }
+    });
+  },
+
+  vote(btn) {
+    if (!this._ok()) return;
+    gsap.fromTo(btn, { scale: 1.45 }, { scale: 1, duration: .55, ease: 'elastic.out(1,.4)' });
+  },
+
+  scorePop(el) {
+    if (!this._ok()) return;
+    gsap.fromTo(el, { scale: 1.5 }, { scale: 1, duration: .5, ease: 'elastic.out(1,.5)' });
+  },
+
+  counter(el, target) {
+    if (!this._ok()) { el.textContent = target; return; }
+    const o = { v: 0 };
+    gsap.to(o, { v: target, duration: 1.4, ease: 'power3.out',
+      onUpdate() { el.textContent = Math.round(o.v); }
+    });
+  },
+
+  stateBox() {
+    if (!this._ok()) return;
+    const box = document.getElementById('state-box');
+    if (!box.children.length) return;
+    gsap.fromTo(box, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .4 });
+  }
+};
+
+// ============================================================
+// PARTICLES.JS — Embers
+// ============================================================
+function initParticles() {
+  if (typeof particlesJS === 'undefined') return;
+  particlesJS('particles-js', {
+    particles: {
+      number: { value: 55, density: { enable: true, value_area: 900 } },
+      color: { value: ['#c8941a','#ff8c00','#ffd700','#ff6600','#ffaa00'] },
+      shape: { type: 'circle' },
+      opacity: {
+        value: 0.3, random: true,
+        anim: { enable: true, speed: 0.5, opacity_min: 0.05, sync: false }
+      },
+      size: {
+        value: 2.2, random: true,
+        anim: { enable: true, speed: 1.5, size_min: 0.4, sync: false }
+      },
+      line_linked: { enable: false },
+      move: {
+        enable: true, speed: 0.65, direction: 'top',
+        random: true, straight: false, out_mode: 'out', bounce: false
+      }
+    },
+    interactivity: {
+      detect_on: 'canvas',
+      events: { onhover: { enable: false }, onclick: { enable: false } }
+    },
+    retina_detect: true
+  });
+}
+
+// ============================================================
+// VOTER IDENTITY
+// ============================================================
+function getVoterKey() {
+  let k = localStorage.getItem('kh_voter_key');
+  if (!k) {
+    k = 'kh_' + Math.random().toString(36).slice(2,9) + '_' + Date.now().toString(36);
+    localStorage.setItem('kh_voter_key', k);
+  }
+  return k;
+}
+function getVotes() {
+  try { return JSON.parse(localStorage.getItem('kh_votes') || '{}'); } catch { return {}; }
+}
+function recordVote(id, type) {
+  const v = getVotes(); v[id] = type;
+  localStorage.setItem('kh_votes', JSON.stringify(v));
+}
+
+// ============================================================
+// GAS BRIDGE — google.script.run wrapper (no CORS)
+// ============================================================
+function gasRun(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(e => reject(new Error(e.message || String(e))))
+      [fn](...args);
+  });
+}
+
+// ============================================================
+// API LAYER
+// ============================================================
+async function apiGet(action, params = {}) {
+  if (!IS_CONFIGURED) throw new Error('API non configurata. Avvia il backend locale su localhost:3000.');
+
+  if (IS_GAS) {
+    if (action === 'listBuilds') return gasRun('apiListBuilds', params);
+    if (action === 'getBuild')   return gasRun('apiGetBuild',   params.id);
+    if (action === 'getStats')   return gasRun('apiGetStats');
+    throw new Error('Azione GAS non supportata: ' + action);
+  }
+
+  const pathMap = { listBuilds: 'builds', getBuild: `builds/${params.id||''}`, getStats: 'stats' };
+  const qs      = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([k]) => k !== 'id')));
+  const url     = `${API_BASE}/${pathMap[action] || action}${qs.toString() ? '?' + qs : ''}`;
+  const res     = await fetch(url);
+  const json    = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Errore API');
+  return json.data;
+}
+
+async function apiPost(action, body = {}) {
+  if (!IS_CONFIGURED) throw new Error('API non configurata.');
+
+  if (IS_GAS) {
+    if (action === 'createBuild') return gasRun('apiCreateBuild', body);
+    if (action === 'vote')        return gasRun('apiVoteBuild', body.id, body.type, body.voterKey);
+    throw new Error('Azione GAS non supportata: ' + action);
+  }
+
+  const pathMap = { createBuild: 'builds', vote: `builds/${body.id||''}/vote` };
+  const url     = `${API_BASE}/${pathMap[action] || action}`;
+  const res     = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const json    = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Errore API');
+  return json.data;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  filters: { mode: 'all', sort: 'votes', search: '', page: 1 },
+  total: 0, pages: 1, builds: [],
+  loading: false, searchTimer: null
+};
+
+// ============================================================
+// UTILS
+// ============================================================
+const MODE_LABEL = { arena:'Arena', pve:'PvE', war:'War', rift:'Rift' };
+function modeLabel(m)      { return MODE_LABEL[m] || m; }
+function formatDate(iso)   { if (!iso) return ''; return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}); }
+function truncate(s, n)    { return s && s.length > n ? s.slice(0,n).trimEnd()+'…' : (s||''); }
+function heroList(b)       { return [b.hero1,b.hero2,b.hero3].filter(Boolean).join(' + ') || '—'; }
+function scoreClass(s)     { return s > 0 ? 'pos' : s < 0 ? 'neg' : 'neu'; }
+
+// ============================================================
+// RENDER
+// ============================================================
+function setStateBox(html) {
+  const el = document.getElementById('state-box');
+  el.innerHTML = html;
+  Anim.stateBox();
+}
+
+function renderLoading() {
+  setStateBox(`
+    <div class="state-box">
+      <div class="forge-loader">
+        <span class="forge-sword">⚔</span>
+        <div class="forge-ring"></div>
+      </div>
+      <h3>Consultando il Grimorio...</h3>
+      <p>Caricamento build dal database in corso.</p>
+    </div>
+  `);
+}
+
+function renderEmpty(hasSearch) {
+  setStateBox(`
+    <div class="state-box">
+      <span class="state-icon">${hasSearch ? '🔍' : '📜'}</span>
+      <h3>${hasSearch ? 'Nessun risultato trovato' : 'Il Grimorio è vuoto'}</h3>
+      <p>${hasSearch
+        ? 'Prova a cambiare i filtri o il testo di ricerca.'
+        : 'Sii il primo guerriero a condividere una build! Clicca su "+ Nuova Build".'
+      }</p>
+    </div>
+  `);
+}
+
+function renderNotConfigured() {
+  setStateBox(`
+    <div class="state-box">
+      <span class="state-icon">⚙️</span>
+      <h3>Configurazione richiesta</h3>
+      <p>Imposta <code>GAS_URL</code> in <code>index.html</code> con l'URL del deploy Google Apps Script,<br>
+         oppure avvia il backend locale su <strong>localhost:3000</strong>.</p>
+      <p style="margin-top:12px;font-size:.82rem;color:var(--text3)">Consulta il README.md per le istruzioni complete.</p>
+    </div>
+  `);
+}
+
+function renderError(msg) {
+  setStateBox(`
+    <div class="state-box">
+      <span class="state-icon">⚠️</span>
+      <h3>Errore di connessione</h3>
+      <p>${msg}</p>
+    </div>
+  `);
+}
+
+function buildCard(b) {
+  const votes = getVotes();
+  const voted = votes[b.id];
+  const score = b.upvotes - b.downvotes;
+  const heroes = heroList(b);
+
+  return `
+    <div class="build-card" data-id="${b.id}" data-mode="${b.mode}">
+      <div class="card-top">
+        <span class="mode-badge ${b.mode}">${modeLabel(b.mode)}</span>
+        <span class="score-badge ${scoreClass(score)}" id="score-${b.id}">
+          ${score >= 0 ? '+' : ''}${score}
+        </span>
+      </div>
+      <h3 class="card-title">${b.title}</h3>
+      <div class="card-info">
+        <div class="info-row"><span class="info-icon">⚔</span><span class="info-val">${b.weapon || '—'}</span></div>
+        <div class="info-row"><span class="info-icon">👥</span><span>${heroes}</span></div>
+        ${b.charms ? `<div class="info-row"><span class="info-icon">✨</span><span>${truncate(b.charms,60)}</span></div>` : ''}
+      </div>
+      ${b.description ? `<p class="card-desc">${truncate(b.description,115)}</p>` : ''}
+      <div class="card-footer">
+        <div class="vote-row">
+          <button class="vote-btn up ${voted==='up'?'voted':''}" id="up-${b.id}"
+                  onclick="doVote(event,'${b.id}','up')" ${voted?'disabled':''}>
+            ▲ <span id="upcount-${b.id}">${b.upvotes}</span>
+          </button>
+          <button class="vote-btn down ${voted==='down'?'voted':''}" id="dn-${b.id}"
+                  onclick="doVote(event,'${b.id}','down')" ${voted?'disabled':''}>
+            ▼ <span id="dncount-${b.id}">${b.downvotes}</span>
+          </button>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="openDetailModal('${b.id}')">
+          Dettagli →
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderBuilds(builds) {
+  document.getElementById('state-box').innerHTML = '';
+  const grid = document.getElementById('builds-grid');
+  if (!builds.length) {
+    grid.innerHTML = '';
+    renderEmpty(state.filters.search || state.filters.mode !== 'all');
+    return;
+  }
+  grid.innerHTML = builds.map(buildCard).join('');
+  Anim.cards(grid);
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  const { page, pages } = state;
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="gotoPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= pages; i++) {
+    if (i===1||i===pages||Math.abs(i-page)<=2) {
+      html += `<button class="page-btn ${i===page?'active':''}" onclick="gotoPage(${i})">${i}</button>`;
+    } else if (Math.abs(i-page)===3) {
+      html += `<span class="page-btn" style="cursor:default;pointer-events:none">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" onclick="gotoPage(${page+1})" ${page===pages?'disabled':''}>›</button>`;
+  el.innerHTML = html;
+}
+
+function renderStats(stats) {
+  Anim.counter(document.getElementById('stat-total'), stats.total ?? 0);
+  Anim.counter(document.getElementById('stat-arena'), stats.byMode?.arena ?? 0);
+  Anim.counter(document.getElementById('stat-pve'),   stats.byMode?.pve   ?? 0);
+  Anim.counter(document.getElementById('stat-war'),   stats.byMode?.war   ?? 0);
+  Anim.counter(document.getElementById('stat-rift'),  stats.byMode?.rift  ?? 0);
+}
+
+function renderResultsCount(total) {
+  document.getElementById('results-count').textContent = total !== null ? `${total} build` : '';
+}
+
+// ============================================================
+// LOAD DATA
+// ============================================================
+async function loadBuilds() {
+  if (state.loading) return;
+  state.loading = true;
+  renderLoading();
+  document.getElementById('builds-grid').innerHTML = '';
+  document.getElementById('pagination').innerHTML = '';
+
+  try {
+    const data = await apiGet('listBuilds', { ...state.filters, limit: 12 });
+    state.builds = data.builds;
+    state.total  = data.total;
+    state.pages  = data.pages;
+    renderBuilds(data.builds);
+    renderPagination();
+    renderResultsCount(data.total);
+  } catch (err) {
+    renderError(err.message);
+    renderResultsCount(null);
+  } finally {
+    state.loading = false;
+  }
+}
+
+async function loadStats() {
+  try { renderStats(await apiGet('getStats')); } catch(_) {}
+}
+
+// ============================================================
+// FILTRI
+// ============================================================
+function setMode(mode) {
+  state.filters.mode = mode; state.filters.page = 1;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  loadBuilds();
+}
+function setSort(sort) { state.filters.sort = sort; state.filters.page = 1; loadBuilds(); }
+function setSearch(q)  { state.filters.search = q;  state.filters.page = 1; loadBuilds(); }
+function gotoPage(p)   { if (p<1||p>state.pages) return; state.filters.page = p; loadBuilds(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+// ============================================================
+// VOTO
+// ============================================================
+async function doVote(event, buildId, type) {
+  event.stopPropagation();
+  const btn = event.currentTarget;
+  btn.disabled = true;
+
+  try {
+    const data = await apiPost('vote', { id: buildId, type, voterKey: getVoterKey() });
+
+    if (data.alreadyVoted) {
+      showToast('Hai già votato questa build', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    recordVote(buildId, type);
+    Anim.vote(btn);
+    showToast(type === 'up' ? '⚔ Voto positivo!' : '🛡 Voto negativo!', 'success');
+
+    // Aggiorna contatori nella card senza reload
+    if (data.upvotes !== undefined) {
+      const upEl    = document.getElementById(`upcount-${buildId}`);
+      const dnEl    = document.getElementById(`dncount-${buildId}`);
+      const scoreEl = document.getElementById(`score-${buildId}`);
+      const upBtn   = document.getElementById(`up-${buildId}`);
+      const dnBtn   = document.getElementById(`dn-${buildId}`);
+
+      if (upEl) upEl.textContent = data.upvotes;
+      if (dnEl) dnEl.textContent = data.downvotes;
+
+      if (scoreEl) {
+        const score = data.upvotes - data.downvotes;
+        scoreEl.textContent  = (score >= 0 ? '+' : '') + score;
+        scoreEl.className    = `score-badge ${scoreClass(score)}`;
+        Anim.scorePop(scoreEl);
+      }
+
+      if (type === 'up'   && upBtn) { upBtn.classList.add('voted'); upBtn.disabled = true; }
+      if (type === 'down' && dnBtn) { dnBtn.classList.add('voted'); dnBtn.disabled = true; }
+
+      const other = type === 'up' ? dnBtn : upBtn;
+      if (other) other.disabled = true;
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+    btn.disabled = false;
+  }
+}
+
+// ============================================================
+// MODAL DETTAGLIO
+// ============================================================
+async function openDetailModal(id) {
+  const overlay = document.getElementById('detail-overlay');
+  const body    = document.getElementById('detail-body');
+
+  body.innerHTML = `
+    <div class="state-box" style="padding:40px 20px">
+      <div class="forge-loader"><span class="forge-sword">⚔</span><div class="forge-ring"></div></div>
+      <p>Caricamento...</p>
+    </div>`;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  Anim.modalOpen(overlay);
+
+  try {
+    const b = await apiGet('getBuild', { id });
+    document.getElementById('detail-modal-title').textContent = b.title;
+    body.innerHTML = renderDetailBody(b);
+  } catch (err) {
+    body.innerHTML = `<div class="state-box"><span class="state-icon">⚠️</span><p>${err.message}</p></div>`;
+  }
+}
+
+function renderDetailBody(b) {
+  const votes  = getVotes();
+  const voted  = votes[b.id];
+  const score  = b.upvotes - b.downvotes;
+  const heroes = [b.hero1, b.hero2, b.hero3].filter(Boolean);
+
+  const slot = (icon, label, val) => `
+    <div class="equip-slot ${val ? '' : 'empty'}">
+      <span class="slot-icon">${icon}</span>
+      <div>
+        <span class="slot-label">${label}</span>
+        <span class="slot-val">${val || 'Non specificato'}</span>
+      </div>
+    </div>`;
+
+  return `
+    <div class="detail-hero">
+      <span class="mode-badge ${b.mode}" style="margin-top:4px">${modeLabel(b.mode)}</span>
+      <div>
+        <div class="detail-title">${b.title}</div>
+        <div class="detail-meta">
+          <span>👤 ${b.author || 'Anonimo'}</span>
+          <span>📅 ${formatDate(b.timestamp)}</span>
+          <span class="${scoreClass(score)}" style="font-weight:700">${score >= 0 ? '+' : ''}${score} punti</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="section-label">⚔ Equipaggiamento</div>
+      <div class="equip-grid">
+        ${slot('⚔','Arma',    b.weapon)}
+        ${slot('🪖','Elmo',    b.helmet)}
+        ${slot('🛡','Corazza', b.chest)}
+        ${slot('🧤','Guanti',  b.gloves)}
+        ${slot('👢','Stivali', b.boots)}
+      </div>
+    </div>
+
+    ${heroes.length ? `
+    <div class="detail-section">
+      <div class="section-label">👥 Eroi</div>
+      <div class="heroes-row">
+        ${heroes.map(h => `<span class="hero-chip">👤 ${h}</span>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${b.charms ? `
+    <div class="detail-section">
+      <div class="section-label">✨ Charm</div>
+      <div class="text-block">${b.charms}</div>
+    </div>` : ''}
+
+    ${b.description ? `
+    <div class="detail-section">
+      <div class="section-label">📖 Strategia</div>
+      <div class="text-block">${b.description}</div>
+    </div>` : ''}
+
+    <div class="detail-vote-row">
+      <button class="vote-btn up vote-btn-lg ${voted==='up'?'voted':''}"
+              onclick="doVote(event,'${b.id}','up')" ${voted?'disabled':''}>
+        ▲ ${b.upvotes} Utili
+      </button>
+      <span style="color:var(--text3);font-size:.85rem">|</span>
+      <button class="vote-btn down vote-btn-lg ${voted==='down'?'voted':''}"
+              onclick="doVote(event,'${b.id}','down')" ${voted?'disabled':''}>
+        ▼ ${b.downvotes} Non utili
+      </button>
+    </div>
+  `;
+}
+
+function closeDetailModal() {
+  const overlay = document.getElementById('detail-overlay');
+  Anim.modalClose(overlay, () => {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  });
+}
+
+// ============================================================
+// MODAL CREA
+// ============================================================
+function openCreateModal() {
+  const overlay = document.getElementById('create-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  Anim.modalOpen(overlay);
+  setTimeout(() => document.getElementById('f-title').focus(), 100);
+}
+
+function closeCreateModal() {
+  const overlay = document.getElementById('create-overlay');
+  Anim.modalClose(overlay, () => {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  });
+}
+
+function resetForm() {
+  document.getElementById('create-form').reset();
+  document.getElementById('desc-counter').textContent = '0 / 1000';
+}
+
+async function submitBuild(event) {
+  event.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvataggio...';
+
+  const data = {
+    title:       document.getElementById('f-title').value.trim(),
+    mode:        document.getElementById('f-mode').value,
+    author:      document.getElementById('f-author').value.trim(),
+    weapon:      document.getElementById('f-weapon').value.trim(),
+    helmet:      document.getElementById('f-helmet').value.trim(),
+    chest:       document.getElementById('f-chest').value.trim(),
+    gloves:      document.getElementById('f-gloves').value.trim(),
+    boots:       document.getElementById('f-boots').value.trim(),
+    hero1:       document.getElementById('f-hero1').value.trim(),
+    hero2:       document.getElementById('f-hero2').value.trim(),
+    hero3:       document.getElementById('f-hero3').value.trim(),
+    charms:      document.getElementById('f-charms').value.trim(),
+    description: document.getElementById('f-desc').value.trim()
+  };
+
+  try {
+    await apiPost('createBuild', data);
+    showToast('⚔ Build forgiata con successo!', 'success');
+    closeCreateModal();
+    resetForm();
+    loadBuilds();
+    loadStats();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚔ Salva Build';
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.transition = 'opacity .3s, transform .3s';
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(110%)';
+    setTimeout(() => t.remove(), 350);
+  }, 3200);
+}
+
+// ============================================================
+// OVERLAY CLICK / KEYBOARD
+// ============================================================
+function overlayClick(ev, id) {
+  if (ev.target.id === id) {
+    if (id === 'create-overlay') closeCreateModal();
+    else if (id === 'detail-overlay') closeDetailModal();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeCreateModal(); closeDetailModal(); }
+});
+
+// ============================================================
+// EVENT BINDINGS
+// ============================================================
+document.getElementById('mode-tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (t) setMode(t.dataset.mode);
+});
+
+document.getElementById('sort-select').addEventListener('change', e => setSort(e.target.value));
+
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(state.searchTimer);
+  state.searchTimer = setTimeout(() => setSearch(e.target.value), 380);
+});
+
+document.getElementById('f-desc').addEventListener('input', e => {
+  document.getElementById('desc-counter').textContent = `${e.target.value.length} / 1000`;
+});
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Con defer, GSAP e particles.js sono già disponibili al DOMContentLoaded
+  initParticles();
+  Anim.header();
+
+  if (!IS_CONFIGURED) {
+    renderNotConfigured();
+    return;
+  }
+  loadBuilds();
+  loadStats();
+});
+</script>
+
+</body>
+</html>

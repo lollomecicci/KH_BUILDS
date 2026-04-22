@@ -1,0 +1,8 @@
+local-backend/node_modules/
+local-backend/.env
+local-backend/kh_builds.db
+
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
