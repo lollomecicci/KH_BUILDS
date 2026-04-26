@@ -17,12 +17,15 @@ async function initSchema() {
         mode        TEXT NOT NULL,
         weapon      TEXT NOT NULL DEFAULT '',
         helmet      TEXT NOT NULL DEFAULT '',
+        spalle      TEXT NOT NULL DEFAULT '',
         chest       TEXT NOT NULL DEFAULT '',
+        braccia     TEXT NOT NULL DEFAULT '',
         gloves      TEXT NOT NULL DEFAULT '',
         boots       TEXT NOT NULL DEFAULT '',
         hero1       TEXT NOT NULL DEFAULT '',
         hero2       TEXT NOT NULL DEFAULT '',
-        hero3       TEXT NOT NULL DEFAULT '',
+        servant1    TEXT NOT NULL DEFAULT '',
+        servant2    TEXT NOT NULL DEFAULT '',
         charms      TEXT NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
         author      TEXT NOT NULL DEFAULT 'Anonimo',
@@ -42,9 +45,135 @@ async function initSchema() {
       )`,
       args: []
     },
-    { sql: `CREATE INDEX IF NOT EXISTS idx_builds_mode   ON builds(mode)`,   args: [] },
-    { sql: `CREATE INDEX IF NOT EXISTS idx_builds_status ON builds(status)`, args: [] },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS heroes (
+        id            TEXT PRIMARY KEY,
+        name          TEXT NOT NULL,
+        rarity        TEXT NOT NULL,
+        class1        TEXT NOT NULL DEFAULT '',
+        class2        TEXT NOT NULL DEFAULT '',
+        strong_vs     TEXT NOT NULL DEFAULT '',
+        danni         REAL,
+        armatura      REAL,
+        pv            REAL,
+        potere1       TEXT NOT NULL DEFAULT '',
+        potere2       TEXT NOT NULL DEFAULT '',
+        potere3       TEXT NOT NULL DEFAULT '',
+        status        TEXT NOT NULL DEFAULT 'pending',
+        submitted_by  TEXT NOT NULL DEFAULT '',
+        confirmations INTEGER NOT NULL DEFAULT 0,
+        timestamp     TEXT NOT NULL
+      )`,
+      args: []
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS servants (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        rarity          TEXT NOT NULL,
+        type            TEXT NOT NULL DEFAULT '',
+        tags            TEXT NOT NULL DEFAULT '',
+        danni           REAL,
+        armatura        REAL,
+        pv              REAL,
+        potere_nome     TEXT NOT NULL DEFAULT '',
+        potere_desc     TEXT NOT NULL DEFAULT '',
+        vulnerabilities TEXT NOT NULL DEFAULT '',
+        resistances     TEXT NOT NULL DEFAULT '',
+        capture_glove   TEXT NOT NULL DEFAULT '',
+        status          TEXT NOT NULL DEFAULT 'pending',
+        submitted_by    TEXT NOT NULL DEFAULT '',
+        confirmations   INTEGER NOT NULL DEFAULT 0,
+        timestamp       TEXT NOT NULL
+      )`,
+      args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_builds_mode      ON builds(mode)`,      args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_builds_status    ON builds(status)`,    args: [] },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS gloves (
+        id            TEXT PRIMARY KEY,
+        name          TEXT NOT NULL,
+        rarity        TEXT NOT NULL,
+        danni         REAL,
+        description   TEXT NOT NULL DEFAULT '',
+        nodes_json    TEXT NOT NULL DEFAULT '[]',
+        nodi_totali   INTEGER,
+        status        TEXT NOT NULL DEFAULT 'pending',
+        submitted_by  TEXT NOT NULL DEFAULT '',
+        confirmations INTEGER NOT NULL DEFAULT 0,
+        timestamp     TEXT NOT NULL
+      )`,
+      args: []
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS weapons (
+        id             TEXT PRIMARY KEY,
+        name           TEXT NOT NULL,
+        rarity         TEXT NOT NULL,
+        weapon_type    TEXT NOT NULL DEFAULT '',
+        danni          REAL,
+        forte_contro_1 TEXT NOT NULL DEFAULT '',
+        forte_contro_2 TEXT NOT NULL DEFAULT '',
+        talisman_slots INTEGER NOT NULL DEFAULT 0,
+        status         TEXT NOT NULL DEFAULT 'pending',
+        submitted_by   TEXT NOT NULL DEFAULT '',
+        confirmations  INTEGER NOT NULL DEFAULT 0,
+        timestamp      TEXT NOT NULL
+      )`,
+      args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_weapons_status   ON weapons(status)`,   args: [] },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS armor_pieces (
+        id             TEXT PRIMARY KEY,
+        name           TEXT NOT NULL,
+        slot           TEXT NOT NULL,
+        rarity         TEXT NOT NULL,
+        armatura       REAL,
+        forte_contro   TEXT NOT NULL DEFAULT '',
+        armor_set      TEXT NOT NULL DEFAULT '',
+        talisman_slots INTEGER NOT NULL DEFAULT 0,
+        status         TEXT NOT NULL DEFAULT 'pending',
+        submitted_by   TEXT NOT NULL DEFAULT '',
+        confirmations  INTEGER NOT NULL DEFAULT 0,
+        timestamp      TEXT NOT NULL
+      )`,
+      args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_armor_slot    ON armor_pieces(slot)`,   args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_armor_status  ON armor_pieces(status)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_heroes_status    ON heroes(status)`,    args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_servants_status  ON servants(status)`,  args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_gloves_status    ON gloves(status)`,    args: [] },
   ], 'write');
+
+  // Tabella conferme community per items
+  await db.execute({
+    sql: `CREATE TABLE IF NOT EXISTS item_confirmations (
+      item_id   TEXT NOT NULL,
+      item_type TEXT NOT NULL,
+      voter_key TEXT NOT NULL,
+      action    TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      PRIMARY KEY (item_id, item_type, voter_key)
+    )`,
+    args: []
+  });
+
+  // Migrazioni su DB esistente: aggiungi colonne se mancanti
+  const migrations = [
+    `ALTER TABLE builds ADD COLUMN spalle       TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds ADD COLUMN braccia      TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds ADD COLUMN servant1     TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds ADD COLUMN servant2     TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN potere_nome    TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN potere_desc    TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN capture_glove  TEXT NOT NULL DEFAULT ''`,
+  ];
+  for (const sql of migrations) {
+    try { await db.execute({ sql, args: [] }); } catch (_) { /* colonna già presente */ }
+  }
 }
 
 async function listBuilds({ mode = 'all', sort = 'votes', search = '', page = 1, limit = 12 }) {
@@ -58,8 +187,8 @@ async function listBuilds({ mode = 'all', sort = 'votes', search = '', page = 1,
 
   if (search && search.trim()) {
     const q = '%' + search.trim() + '%';
-    conditions.push('(title LIKE ? OR weapon LIKE ? OR hero1 LIKE ? OR hero2 LIKE ? OR hero3 LIKE ? OR description LIKE ?)');
-    args.push(q, q, q, q, q, q);
+    conditions.push('(title LIKE ? OR weapon LIKE ? OR hero1 LIKE ? OR hero2 LIKE ? OR servant1 LIKE ? OR servant2 LIKE ? OR description LIKE ?)');
+    args.push(q, q, q, q, q, q, q);
   }
 
   const where = 'WHERE ' + conditions.join(' AND ');
@@ -110,12 +239,15 @@ async function createBuild(d) {
 
   await db.execute({
     sql: `INSERT INTO builds
-          (id,timestamp,title,mode,weapon,helmet,chest,gloves,boots,hero1,hero2,hero3,charms,description,author,upvotes,downvotes,status)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active')`,
+          (id,timestamp,title,mode,weapon,helmet,spalle,chest,braccia,gloves,boots,hero1,hero2,servant1,servant2,charms,description,author,upvotes,downvotes,status)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active')`,
     args: [
       id, ts, title, mode, weapon,
-      (d.helmet||'').trim(), (d.chest||'').trim(), (d.gloves||'').trim(), (d.boots||'').trim(),
-      (d.hero1||'').trim(),  (d.hero2||'').trim(),  (d.hero3||'').trim(),
+      (d.helmet  ||'').trim(), (d.spalle  ||'').trim(),
+      (d.chest   ||'').trim(), (d.braccia ||'').trim(),
+      (d.gloves  ||'').trim(), (d.boots   ||'').trim(),
+      (d.hero1   ||'').trim(), (d.hero2   ||'').trim(),
+      (d.servant1||'').trim(), (d.servant2||'').trim(),
       (d.charms||'').trim(), (d.description||'').trim(), author
     ]
   });
@@ -185,12 +317,15 @@ function rowToObj(row) {
     mode:        s('mode'),
     weapon:      s('weapon'),
     helmet:      s('helmet'),
+    spalle:      s('spalle'),
     chest:       s('chest'),
+    braccia:     s('braccia'),
     gloves:      s('gloves'),
     boots:       s('boots'),
     hero1:       s('hero1'),
     hero2:       s('hero2'),
-    hero3:       s('hero3'),
+    servant1:    s('servant1'),
+    servant2:    s('servant2'),
     charms:      s('charms'),
     description: s('description'),
     author:      s('author') || 'Anonimo',
@@ -200,4 +335,441 @@ function rowToObj(row) {
   };
 }
 
-module.exports = { initSchema, listBuilds, getBuild, createBuild, voteBuild, getStats };
+function heroToObj(row) {
+  const s = k => String(row[k] || '');
+  const n = k => (row[k] != null ? Number(row[k]) : null);
+  return {
+    id:            s('id'),
+    name:          s('name'),
+    rarity:        s('rarity'),
+    class1:        s('class1'),
+    class2:        s('class2'),
+    strong_vs:     s('strong_vs'),
+    danni:         n('danni'),
+    armatura:      n('armatura'),
+    pv:            n('pv'),
+    potere1:       s('potere1'),
+    potere2:       s('potere2'),
+    potere3:       s('potere3'),
+    status:        s('status'),
+    submitted_by:  s('submitted_by'),
+    confirmations: Number(row.confirmations || 0),
+    timestamp:     s('timestamp'),
+  };
+}
+
+function servantToObj(row) {
+  const s = k => String(row[k] || '');
+  const n = k => (row[k] != null ? Number(row[k]) : null);
+  return {
+    id:              s('id'),
+    name:            s('name'),
+    rarity:          s('rarity'),
+    type:            s('type'),
+    tags:            s('tags'),
+    danni:           n('danni'),
+    armatura:        n('armatura'),
+    pv:              n('pv'),
+    potere_nome:     s('potere_nome'),
+    potere_desc:     s('potere_desc'),
+    vulnerabilities: s('vulnerabilities'),
+    resistances:     s('resistances'),
+    capture_glove:   s('capture_glove'),
+    status:          s('status'),
+    submitted_by:    s('submitted_by'),
+    confirmations:   Number(row.confirmations || 0),
+    timestamp:       s('timestamp'),
+  };
+}
+
+// ─── Community confirmation ───────────────────────────────────────────────────
+
+const ITEM_TABLES = { weapon: 'weapons', armor: 'armor_pieces', hero: 'heroes', servant: 'servants', glove: 'gloves' };
+const CONFIRM_THRESHOLD = 3;
+const FLAG_THRESHOLD    = 3;
+
+async function confirmItem(itemType, itemId, voterKey, action) {
+  const table = ITEM_TABLES[itemType];
+  if (!table)                             throw new Error('Tipo item non valido');
+  if (!itemId)                            throw new Error('ID item mancante');
+  if (!voterKey)                          throw new Error('voter_key mancante');
+  if (!['confirm','flag'].includes(action)) throw new Error('Azione non valida (confirm/flag)');
+
+  // Controlla se item esiste
+  const itemRes = await db.execute({ sql: `SELECT id, status FROM ${table} WHERE id = ?`, args: [itemId] });
+  if (!itemRes.rows.length) throw new Error('Item non trovato');
+  const currentStatus = String(itemRes.rows[0].status);
+  if (currentStatus === 'verified' && action === 'confirm') {
+    return { alreadyVerified: true, message: 'Item già verificato' };
+  }
+
+  // Dedup: un voter_key per item
+  const dupRes = await db.execute({
+    sql:  'SELECT action FROM item_confirmations WHERE item_id = ? AND item_type = ? AND voter_key = ?',
+    args: [itemId, itemType, voterKey]
+  });
+  if (dupRes.rows.length) {
+    return { alreadyVoted: true, action: String(dupRes.rows[0].action), message: 'Hai già espresso un parere su questo item' };
+  }
+
+  await db.execute({
+    sql:  'INSERT INTO item_confirmations (item_id, item_type, voter_key, action, timestamp) VALUES (?,?,?,?,?)',
+    args: [itemId, itemType, voterKey, action, new Date().toISOString()]
+  });
+
+  // Conta conferme e flag
+  const countRes = await db.execute({
+    sql:  'SELECT action, COUNT(*) as cnt FROM item_confirmations WHERE item_id = ? AND item_type = ? GROUP BY action',
+    args: [itemId, itemType]
+  });
+  let confirms = 0, flags = 0;
+  for (const row of countRes.rows) {
+    if (row.action === 'confirm') confirms = Number(row.cnt);
+    if (row.action === 'flag')    flags    = Number(row.cnt);
+  }
+
+  let newStatus = currentStatus;
+  if (flags >= FLAG_THRESHOLD)    newStatus = 'flagged';
+  else if (confirms >= CONFIRM_THRESHOLD) newStatus = 'verified';
+
+  if (newStatus !== currentStatus) {
+    await db.execute({ sql: `UPDATE ${table} SET status = ? WHERE id = ?`, args: [newStatus, itemId] });
+  }
+
+  return { message: 'Parere registrato!', confirms, flags, status: newStatus };
+}
+
+async function adminSetStatus(itemType, itemId, newStatus) {
+  const table = ITEM_TABLES[itemType];
+  if (!table) throw new Error('Tipo item non valido');
+  if (!['pending','verified','flagged'].includes(newStatus)) throw new Error('Status non valido');
+  const res = await db.execute({ sql: `UPDATE ${table} SET status = ? WHERE id = ?`, args: [newStatus, itemId] });
+  if (!res.rowsAffected) throw new Error('Item non trovato');
+  return { message: `Status aggiornato a ${newStatus}` };
+}
+
+// ─── Weapons ─────────────────────────────────────────────────────────────────
+
+function weaponToObj(row) {
+  const s = k => String(row[k] || '');
+  return {
+    id:             s('id'),
+    name:           s('name'),
+    rarity:         s('rarity'),
+    weapon_type:    s('weapon_type'),
+    danni:          row.danni != null ? Number(row.danni) : null,
+    forte_contro_1: s('forte_contro_1'),
+    forte_contro_2: s('forte_contro_2'),
+    talisman_slots: Number(row.talisman_slots || 0),
+    status:         s('status'),
+    submitted_by:   s('submitted_by'),
+    confirmations:  Number(row.confirmations || 0),
+    timestamp:      s('timestamp'),
+  };
+}
+
+async function listWeapons({ rarity, weapon_type, status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all')  { conds.push('status = ?');      args.push(status); }
+  if (rarity)            { conds.push('rarity = ?');       args.push(rarity); }
+  if (weapon_type)       { conds.push('weapon_type = ?');  args.push(weapon_type); }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR weapon_type LIKE ?)');
+    args.push(q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM weapons ${where} ORDER BY name ASC`, args });
+  return res.rows.map(weaponToObj);
+}
+
+async function getWeapon(id) {
+  if (!id) throw new Error('ID arma mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM weapons WHERE id = ?', args: [id] });
+  return res.rows.length ? weaponToObj(res.rows[0]) : null;
+}
+
+async function createWeapon(d) {
+  const name        = (d.name        || '').trim();
+  const rarity      = (d.rarity      || '').trim().toLowerCase();
+  const weapon_type = (d.weapon_type || '').trim();
+  if (!name)                                   throw new Error('Nome arma obbligatorio');
+  if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO weapons (id,name,rarity,weapon_type,danni,forte_contro_1,forte_contro_2,talisman_slots,status,submitted_by,confirmations,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    args: [
+      id, name, rarity, weapon_type,
+      d.danni != null ? Number(d.danni) : null,
+      (d.forte_contro_1||'').trim(),
+      (d.forte_contro_2||'').trim(),
+      d.talisman_slots != null ? Number(d.talisman_slots) : 0,
+      (d.submitted_by||'').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Arma inviata per verifica!' };
+}
+
+// ─── Heroes ──────────────────────────────────────────────────────────────────
+
+const VALID_RARITIES      = ['comune','raro','epico','leggendario','unico'];
+const VALID_RARITIES_ITEM = ['comune','raro','epico','leggendario','unico','mitico'];
+const VALID_ARMOR_SLOTS   = ['elmo','spalle','busto','braccia','gambe'];
+const VALID_ARMOR_SETS    = ['pesante','magico','leggero','a distanza'];
+const VALID_WEAPON_TYPES  = ['spada','ascia','martello'];
+const VALID_HERO_STAT = { status: ['pending','verified','flagged'] };
+
+async function listHeroes({ rarity, status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all') { conds.push('status = ?'); args.push(status); }
+  if (rarity)           { conds.push('rarity = ?'); args.push(rarity); }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR class1 LIKE ? OR class2 LIKE ?)');
+    args.push(q, q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM heroes ${where} ORDER BY name ASC`, args });
+  return res.rows.map(heroToObj);
+}
+
+async function getHero(id) {
+  if (!id) throw new Error('ID eroe mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM heroes WHERE id = ?', args: [id] });
+  return res.rows.length ? heroToObj(res.rows[0]) : null;
+}
+
+async function createHero(d) {
+  const name   = (d.name   || '').trim();
+  const rarity = (d.rarity || '').trim().toLowerCase();
+  if (!name)                           throw new Error('Nome eroe obbligatorio');
+  if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO heroes (id,name,rarity,class1,class2,strong_vs,danni,armatura,pv,potere1,potere2,potere3,status,submitted_by,confirmations,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    args: [
+      id, name, rarity,
+      (d.class1    ||'').trim(), (d.class2    ||'').trim(),
+      (d.strong_vs ||'').trim(),
+      d.danni    != null ? Number(d.danni)    : null,
+      d.armatura != null ? Number(d.armatura) : null,
+      d.pv       != null ? Number(d.pv)       : null,
+      (d.potere1||'').trim(), (d.potere2||'').trim(), (d.potere3||'').trim(),
+      (d.submitted_by||'').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Eroe inviato per verifica!' };
+}
+
+// ─── Servants ────────────────────────────────────────────────────────────────
+
+async function listServants({ rarity, type, status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all') { conds.push('status = ?'); args.push(status); }
+  if (rarity)           { conds.push('rarity = ?'); args.push(rarity); }
+  if (type)             { conds.push('type = ?');   args.push(type);   }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR tags LIKE ?)');
+    args.push(q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM servants ${where} ORDER BY name ASC`, args });
+  return res.rows.map(servantToObj);
+}
+
+async function getServant(id) {
+  if (!id) throw new Error('ID servitore mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM servants WHERE id = ?', args: [id] });
+  return res.rows.length ? servantToObj(res.rows[0]) : null;
+}
+
+async function createServant(d) {
+  const name   = (d.name   || '').trim();
+  const rarity = (d.rarity || '').trim().toLowerCase();
+  if (!name)                           throw new Error('Nome servitore obbligatorio');
+  if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO servants (id,name,rarity,type,tags,danni,armatura,pv,potere_nome,potere_desc,vulnerabilities,resistances,capture_glove,status,submitted_by,confirmations,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    args: [
+      id, name, rarity,
+      (d.type  ||'').trim(),
+      (d.tags  ||'').trim(),
+      d.danni    != null ? Number(d.danni)    : null,
+      d.armatura != null ? Number(d.armatura) : null,
+      d.pv       != null ? Number(d.pv)       : null,
+      (d.potere_nome     ||'').trim(),
+      (d.potere_desc     ||'').trim(),
+      (d.vulnerabilities ||'').trim(),
+      (d.resistances     ||'').trim(),
+      (d.capture_glove   ||'').trim(),
+      (d.submitted_by    ||'').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Servitore inviato per verifica!' };
+}
+
+// ─── Gloves ──────────────────────────────────────────────────────────────────
+
+function gloveToObj(row) {
+  const s = k => String(row[k] || '');
+  let nodes = [];
+  try { nodes = JSON.parse(row.nodes_json || '[]'); } catch (_) {}
+  return {
+    id:            s('id'),
+    name:          s('name'),
+    rarity:        s('rarity'),
+    danni:         row.danni != null ? Number(row.danni) : null,
+    description:   s('description'),
+    nodes:         nodes,
+    nodi_totali:   row.nodi_totali != null ? Number(row.nodi_totali) : null,
+    status:        s('status'),
+    submitted_by:  s('submitted_by'),
+    confirmations: Number(row.confirmations || 0),
+    timestamp:     s('timestamp'),
+  };
+}
+
+async function listGloves({ rarity, status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all') { conds.push('status = ?'); args.push(status); }
+  if (rarity)           { conds.push('rarity = ?'); args.push(rarity); }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR description LIKE ?)');
+    args.push(q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM gloves ${where} ORDER BY name ASC`, args });
+  return res.rows.map(gloveToObj);
+}
+
+async function getGlove(id) {
+  if (!id) throw new Error('ID guanto mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM gloves WHERE id = ?', args: [id] });
+  return res.rows.length ? gloveToObj(res.rows[0]) : null;
+}
+
+async function createGlove(d) {
+  const name   = (d.name   || '').trim();
+  const rarity = (d.rarity || '').trim().toLowerCase();
+  if (!name)                            throw new Error('Nome guanto obbligatorio');
+  if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+
+  // nodes: array di { nome, desc, costo }
+  let nodes = d.nodes || [];
+  if (!Array.isArray(nodes)) throw new Error('nodes deve essere un array');
+  const nodes_json = JSON.stringify(nodes);
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO gloves (id,name,rarity,danni,description,nodes_json,nodi_totali,status,submitted_by,confirmations,timestamp)
+          VALUES (?,?,?,?,?,?,?,'pending',?,0,?)`,
+    args: [
+      id, name, rarity,
+      d.danni != null ? Number(d.danni) : null,
+      (d.description||'').trim(),
+      nodes_json,
+      d.nodi_totali != null ? Number(d.nodi_totali) : null,
+      (d.submitted_by||'').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Guanto inviato per verifica!' };
+}
+
+// ─── Armor ───────────────────────────────────────────────────────────────────
+
+function armorToObj(row) {
+  const s = k => String(row[k] || '');
+  return {
+    id:             s('id'),
+    name:           s('name'),
+    slot:           s('slot'),
+    rarity:         s('rarity'),
+    armatura:       row.armatura != null ? Number(row.armatura) : null,
+    forte_contro:   s('forte_contro'),
+    armor_set:      s('armor_set'),
+    talisman_slots: Number(row.talisman_slots || 0),
+    status:         s('status'),
+    submitted_by:   s('submitted_by'),
+    confirmations:  Number(row.confirmations || 0),
+    timestamp:      s('timestamp'),
+  };
+}
+
+async function listArmorPieces({ slot, rarity, armor_set, status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all') { conds.push('status = ?');    args.push(status); }
+  if (slot)             { conds.push('slot = ?');       args.push(slot); }
+  if (rarity)           { conds.push('rarity = ?');     args.push(rarity); }
+  if (armor_set)        { conds.push('armor_set = ?');  args.push(armor_set); }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR forte_contro LIKE ? OR armor_set LIKE ?)');
+    args.push(q, q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM armor_pieces ${where} ORDER BY slot ASC, name ASC`, args });
+  return res.rows.map(armorToObj);
+}
+
+async function getArmorPiece(id) {
+  if (!id) throw new Error('ID armatura mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM armor_pieces WHERE id = ?', args: [id] });
+  return res.rows.length ? armorToObj(res.rows[0]) : null;
+}
+
+async function createArmorPiece(d) {
+  const name   = (d.name   || '').trim();
+  const slot   = (d.slot   || '').trim().toLowerCase();
+  const rarity = (d.rarity || '').trim().toLowerCase();
+  if (!name)                               throw new Error('Nome armatura obbligatorio');
+  if (!VALID_ARMOR_SLOTS.includes(slot))   throw new Error('Slot non valido (elmo/spalle/busto/braccia/gambe)');
+  if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+
+  const armor_set    = (d.armor_set    || '').trim().toLowerCase();
+  const forte_contro = (d.forte_contro || '').trim();
+  if (armor_set && !VALID_ARMOR_SETS.includes(armor_set)) throw new Error('Set armatura non valido (pesante/magico/leggero/a distanza)');
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO armor_pieces (id,name,slot,rarity,armatura,forte_contro,armor_set,talisman_slots,status,submitted_by,confirmations,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    args: [
+      id, name, slot, rarity,
+      d.armatura != null ? Number(d.armatura) : null,
+      forte_contro, armor_set,
+      d.talisman_slots != null ? Number(d.talisman_slots) : 0,
+      (d.submitted_by||'').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Armatura inviata per verifica!' };
+}
+
+module.exports = {
+  initSchema,
+  listBuilds, getBuild, createBuild, voteBuild, getStats,
+  listWeapons, getWeapon, createWeapon,
+  listArmorPieces, getArmorPiece, createArmorPiece,
+  listHeroes, getHero, createHero,
+  listServants, getServant, createServant,
+  listGloves, getGlove, createGlove,
+  confirmItem, adminSetStatus,
+};
