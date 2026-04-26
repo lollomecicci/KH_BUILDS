@@ -148,6 +148,19 @@ async function initSchema() {
     { sql: `CREATE INDEX IF NOT EXISTS idx_gloves_status    ON gloves(status)`,    args: [] },
   ], 'write');
 
+  await db.execute({
+    sql: `CREATE TABLE IF NOT EXISTS users (
+      id          TEXT PRIMARY KEY,
+      gamertag    TEXT NOT NULL,
+      provider    TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      avatar_url  TEXT NOT NULL DEFAULT '',
+      created_at  TEXT NOT NULL,
+      UNIQUE(provider, provider_id)
+    )`,
+    args: []
+  });
+
   // Tabella conferme community per items
   await db.execute({
     sql: `CREATE TABLE IF NOT EXISTS item_confirmations (
@@ -763,6 +776,40 @@ async function createArmorPiece(d) {
   return { id, message: 'Armatura inviata per verifica!' };
 }
 
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
+  const existing = await db.execute({
+    sql:  'SELECT * FROM users WHERE provider = ? AND provider_id = ?',
+    args: [provider, provider_id]
+  });
+
+  if (existing.rows.length) {
+    const u = existing.rows[0];
+    await db.execute({
+      sql:  'UPDATE users SET avatar_url = ? WHERE id = ?',
+      args: [avatar_url, u.id]
+    });
+    return { id: String(u.id), gamertag: String(u.gamertag), provider, avatar_url };
+  }
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, created_at) VALUES (?,?,?,?,?,?)',
+    args: [id, gamertag, provider, provider_id, avatar_url, new Date().toISOString()]
+  });
+  return { id, gamertag, provider, avatar_url };
+}
+
+async function updateGamertag(userId, gamertag) {
+  gamertag = (gamertag || '').trim();
+  if (!gamertag || gamertag.length < 2) throw new Error('Gamertag troppo corto (min 2 caratteri)');
+  if (gamertag.length > 32)             throw new Error('Gamertag troppo lungo (max 32 caratteri)');
+  const res = await db.execute({ sql: 'UPDATE users SET gamertag = ? WHERE id = ?', args: [gamertag, userId] });
+  if (!res.rowsAffected) throw new Error('Utente non trovato');
+  return { gamertag };
+}
+
 module.exports = {
   initSchema,
   listBuilds, getBuild, createBuild, voteBuild, getStats,
@@ -772,4 +819,5 @@ module.exports = {
   listServants, getServant, createServant,
   listGloves, getGlove, createGlove,
   confirmItem, adminSetStatus,
+  upsertUser, updateGamertag,
 };

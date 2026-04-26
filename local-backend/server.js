@@ -4,6 +4,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const dotenv  = require('dotenv');
+const jwt     = require('jsonwebtoken');
 const db      = require('./db');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -78,6 +79,141 @@ app.get('/api/stats', async (_req, res) => {
   } catch (err) {
     console.error('[getStats]', err.message);
     res.status(500).json(fail(err.message));
+  }
+});
+
+// ---- AUTH HELPERS ------------------------------------------
+
+function signToken(user) {
+  return jwt.sign(
+    { userId: user.id, gamertag: user.gamertag, avatar: user.avatar_url },
+    process.env.JWT_SECRET || 'dev_secret_change_me',
+    { expiresIn: '30d' }
+  );
+}
+
+function parseToken(req) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return null;
+  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev_secret_change_me'); }
+  catch { return null; }
+}
+
+const APP_URL = () => process.env.APP_URL || 'http://localhost:3000';
+
+// ---- AUTH — DISCORD ----------------------------------------
+
+app.get('/auth/discord', (req, res) => {
+  if (!process.env.DISCORD_CLIENT_ID) return res.status(503).send('Discord OAuth non configurato');
+  const params = new URLSearchParams({
+    client_id:     process.env.DISCORD_CLIENT_ID,
+    redirect_uri:  `${APP_URL()}/auth/discord/callback`,
+    response_type: 'code',
+    scope:         'identify',
+  });
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+});
+
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.redirect('/?auth_error=no_code');
+  try {
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type:    'authorization_code',
+        code,
+        redirect_uri:  `${APP_URL()}/auth/discord/callback`,
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) throw new Error('Token Discord non ricevuto');
+
+    const profileRes  = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await profileRes.json();
+
+    const avatar = profile.avatar
+      ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=64`
+      : '';
+
+    const user  = await db.upsertUser({ provider: 'discord', provider_id: profile.id, gamertag: profile.username, avatar_url: avatar });
+    const token = signToken(user);
+    res.redirect(`/?auth_token=${token}`);
+  } catch (err) {
+    console.error('[discord/callback]', err.message);
+    res.redirect('/?auth_error=discord_failed');
+  }
+});
+
+// ---- AUTH — GOOGLE -----------------------------------------
+
+app.get('/auth/google', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).send('Google OAuth non configurato');
+  const params = new URLSearchParams({
+    client_id:     process.env.GOOGLE_CLIENT_ID,
+    redirect_uri:  `${APP_URL()}/auth/google/callback`,
+    response_type: 'code',
+    scope:         'openid email profile',
+    access_type:   'online',
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.redirect('/?auth_error=no_code');
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        grant_type:    'authorization_code',
+        code,
+        redirect_uri:  `${APP_URL()}/auth/google/callback`,
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) throw new Error('Token Google non ricevuto');
+
+    const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await profileRes.json();
+
+    const gamertag = profile.name || profile.email.split('@')[0];
+    const user  = await db.upsertUser({ provider: 'google', provider_id: profile.id, gamertag, avatar_url: profile.picture || '' });
+    const token = signToken(user);
+    res.redirect(`/?auth_token=${token}`);
+  } catch (err) {
+    console.error('[google/callback]', err.message);
+    res.redirect('/?auth_error=google_failed');
+  }
+});
+
+// ---- AUTH — ME ---------------------------------------------
+
+app.get('/api/me', (req, res) => {
+  const user = parseToken(req);
+  if (!user) return res.status(401).json(fail('Non autenticato'));
+  res.json(ok({ userId: user.userId, gamertag: user.gamertag, avatar: user.avatar }));
+});
+
+app.patch('/api/me/gamertag', async (req, res) => {
+  const user = parseToken(req);
+  if (!user) return res.status(401).json(fail('Non autenticato'));
+  try {
+    const data  = await db.updateGamertag(user.userId, req.body.gamertag);
+    const token = signToken({ id: user.userId, gamertag: data.gamertag, avatar_url: user.avatar || '' });
+    res.json(ok({ gamertag: data.gamertag, token }));
+  } catch (err) {
+    res.status(400).json(fail(err.message));
   }
 });
 

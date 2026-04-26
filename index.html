@@ -955,6 +955,97 @@
     }
 
     /* ============================================================
+       AUTH UI
+    ============================================================ */
+    .auth-area { display: flex; align-items: center; gap: 10px; }
+
+    .btn-discord {
+      background: #5865f2;
+      color: #fff;
+      border: none;
+    }
+    .btn-discord:hover { background: #4752c4; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(88,101,242,.4); }
+
+    .btn-google {
+      background: #fff;
+      color: #1f1f1f;
+      border: 1px solid #ddd;
+    }
+    .btn-google:hover { background: #f5f5f5; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border-h);
+      border-radius: 100px;
+      padding: 5px 14px 5px 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .user-chip:hover { border-color: var(--gold-d); background: var(--gold-bg); }
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+    }
+    .user-avatar-placeholder {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .85rem;
+    }
+    .user-gamertag {
+      font-size: .88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Modal auth */
+    .login-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 8px 0 16px;
+    }
+    .btn-login-provider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: var(--radius-sm);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: var(--transition);
+      text-align: left;
+    }
+    .btn-login-provider .provider-icon { font-size: 1.3rem; }
+    .btn-login-provider.discord { background: rgba(88,101,242,.12); color: #8891f7; border-color: rgba(88,101,242,.3); }
+    .btn-login-provider.discord:hover { background: rgba(88,101,242,.22); border-color: rgba(88,101,242,.6); }
+    .btn-login-provider.google  { background: rgba(255,255,255,.04); color: var(--text); border-color: var(--border-h); }
+    .btn-login-provider.google:hover  { background: rgba(255,255,255,.08); border-color: var(--gold-d); }
+
+    .profile-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 8px;
+    }
+    .gamertag-edit { display: flex; gap: 8px; }
+    .gamertag-edit input { flex: 1; }
+
+    /* ============================================================
        RESPONSIVE
     ============================================================ */
     @media (max-width: 640px) {
@@ -1003,9 +1094,10 @@
 
     <div class="header-ornament" aria-hidden="true">◆</div>
 
-    <button class="btn btn-gold" onclick="openCreateModal()">
-      ＋ Nuova Build
-    </button>
+    <div class="auth-area">
+      <button class="btn btn-gold" onclick="openCreateModal()">＋ Nuova Build</button>
+      <div id="auth-widget"></div>
+    </div>
 
   </div>
 </header>
@@ -1134,29 +1226,37 @@
             <div class="form-group full">
               <label>Arma <span class="req">*</span></label>
               <input type="text" id="f-weapon" class="form-input"
-                     placeholder="Es: Spada del Caos (Leggendaria)" maxlength="100" required />
+                     placeholder="Es: Spaccamiti (Mitico)" maxlength="100" required />
             </div>
             <div class="form-group">
               <label>Elmo</label>
               <input type="text" id="f-helmet" class="form-input" placeholder="Nome elmo" maxlength="100" />
             </div>
             <div class="form-group">
-              <label>Corazza</label>
+              <label>Spalle</label>
+              <input type="text" id="f-spalle" class="form-input" placeholder="Nome spallacci" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Busto</label>
               <input type="text" id="f-chest" class="form-input" placeholder="Nome corazza" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label>Braccia</label>
+              <input type="text" id="f-braccia" class="form-input" placeholder="Nome bracciali" maxlength="100" />
             </div>
             <div class="form-group">
               <label>Guanti</label>
               <input type="text" id="f-gloves" class="form-input" placeholder="Nome guanti" maxlength="100" />
             </div>
             <div class="form-group">
-              <label>Stivali</label>
-              <input type="text" id="f-boots" class="form-input" placeholder="Nome stivali" maxlength="100" />
+              <label>Gambe</label>
+              <input type="text" id="f-boots" class="form-input" placeholder="Nome gambali" maxlength="100" />
             </div>
           </div>
         </div>
 
         <div class="form-section">
-          <div class="section-label">👥 Eroi</div>
+          <div class="section-label">👥 Compagnia</div>
           <div class="form-grid">
             <div class="form-group">
               <label>Eroe 1</label>
@@ -1166,9 +1266,13 @@
               <label>Eroe 2</label>
               <input type="text" id="f-hero2" class="form-input" placeholder="Nome eroe" maxlength="50" />
             </div>
-            <div class="form-group full">
-              <label>Eroe 3</label>
-              <input type="text" id="f-hero3" class="form-input" placeholder="Nome eroe" maxlength="50" />
+            <div class="form-group">
+              <label>Servitore 1</label>
+              <input type="text" id="f-servant1" class="form-input" placeholder="Nome servitore" maxlength="50" />
+            </div>
+            <div class="form-group">
+              <label>Servitore 2</label>
+              <input type="text" id="f-servant2" class="form-input" placeholder="Nome servitore" maxlength="50" />
             </div>
           </div>
         </div>
@@ -1210,6 +1314,51 @@
       <button class="modal-close" onclick="closeDetailModal()" aria-label="Chiudi">✕</button>
     </div>
     <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — LOGIN
+============================================================ -->
+<div class="modal-overlay" id="login-overlay" onclick="overlayClick(event,'login-overlay')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2>⚔ Accedi a KH Builds</h2>
+      <button class="modal-close" onclick="closeModal('login-overlay')" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:18px">
+        Accedi per contribuire al database della community e firmare le tue build con il tuo gamertag.
+      </p>
+      <div class="login-options">
+        <button class="btn-login-provider discord" onclick="loginWith('discord')">
+          <span class="provider-icon">🎮</span>
+          <span>Continua con Discord</span>
+        </button>
+        <button class="btn-login-provider google" onclick="loginWith('google')">
+          <span class="provider-icon">🔵</span>
+          <span>Continua con Google</span>
+        </button>
+      </div>
+      <p style="color:var(--text3);font-size:.76rem;text-align:center">
+        Accedendo accetti che il tuo username venga mostrato pubblicamente.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — PROFILO
+============================================================ -->
+<div class="modal-overlay" id="profile-overlay" onclick="overlayClick(event,'profile-overlay')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2>👤 Il tuo Profilo</h2>
+      <button class="modal-close" onclick="closeModal('profile-overlay')" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="profile-body"></div>
+    </div>
   </div>
 </div>
 
@@ -1330,6 +1479,133 @@ function initParticles() {
 }
 
 // ============================================================
+// AUTH
+// ============================================================
+const Auth = {
+  _user: null,
+
+  init() {
+    // Leggi token da URL (dopo redirect OAuth) o da localStorage
+    const urlParams = new URLSearchParams(location.search);
+    const urlToken  = urlParams.get('auth_token');
+    const urlError  = urlParams.get('auth_error');
+
+    if (urlToken) {
+      localStorage.setItem('kh_jwt', urlToken);
+      history.replaceState({}, '', location.pathname);
+    }
+    if (urlError) {
+      history.replaceState({}, '', location.pathname);
+      showToast('Accesso fallito. Riprova.', 'error');
+    }
+
+    const token = localStorage.getItem('kh_jwt');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 > Date.now()) {
+          this._user = { userId: payload.userId, gamertag: payload.gamertag, avatar: payload.avatar };
+        } else {
+          localStorage.removeItem('kh_jwt');
+        }
+      } catch { localStorage.removeItem('kh_jwt'); }
+    }
+    this.renderWidget();
+  },
+
+  get user() { return this._user; },
+  isLoggedIn() { return Boolean(this._user); },
+  token() { return localStorage.getItem('kh_jwt'); },
+
+  authHeader() {
+    const t = this.token();
+    return t ? { 'Authorization': `Bearer ${t}` } : {};
+  },
+
+  logout() {
+    localStorage.removeItem('kh_jwt');
+    this._user = null;
+    this.renderWidget();
+    showToast('Disconnesso.', 'info');
+  },
+
+  renderWidget() {
+    const el = document.getElementById('auth-widget');
+    if (!el) return;
+    if (!this._user) {
+      el.innerHTML = `<button class="btn btn-outline btn-sm" onclick="openModal('login-overlay')">Accedi</button>`;
+    } else {
+      const avatarHtml = this._user.avatar
+        ? `<img class="user-avatar" src="${this._user.avatar}" alt="" />`
+        : `<span class="user-avatar-placeholder">👤</span>`;
+      el.innerHTML = `
+        <div class="user-chip" onclick="openProfileModal()" title="Il tuo profilo">
+          ${avatarHtml}
+          <span class="user-gamertag">${this._user.gamertag}</span>
+        </div>`;
+    }
+  }
+};
+
+function loginWith(provider) {
+  window.location.href = `${IS_LOCAL ? 'http://localhost:3000' : ''}/auth/${provider}`;
+}
+
+function openProfileModal() {
+  const body = document.getElementById('profile-body');
+  const u    = Auth.user;
+  if (!u) return;
+
+  const providerIcon = { discord: '🎮', google: '🔵' };
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+      ${u.avatar
+        ? `<img class="user-avatar" src="${u.avatar}" style="width:48px;height:48px" alt="" />`
+        : `<span class="user-avatar-placeholder" style="width:48px;height:48px;font-size:1.5rem">👤</span>`}
+      <div>
+        <div style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--text)">${u.gamertag}</div>
+        <div style="font-size:.8rem;color:var(--text3)">ID: ${u.userId.slice(0,8)}…</div>
+      </div>
+    </div>
+    <div class="profile-actions">
+      <div class="form-group">
+        <label>Cambia gamertag</label>
+        <div class="gamertag-edit">
+          <input type="text" id="new-gamertag" class="form-input" value="${u.gamertag}" maxlength="32" />
+          <button class="btn btn-gold btn-sm" onclick="saveGamertag()">Salva</button>
+        </div>
+        <span class="field-hint">2–32 caratteri, visibile pubblicamente</span>
+      </div>
+      <button class="btn btn-outline" onclick="Auth.logout();closeModal('profile-overlay')">
+        Disconnetti
+      </button>
+    </div>`;
+
+  openModal('profile-overlay');
+}
+
+async function saveGamertag() {
+  const val = document.getElementById('new-gamertag').value.trim();
+  try {
+    const res  = await fetch(`${API_BASE}/me/gamertag`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ gamertag: val })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    localStorage.setItem('kh_jwt', json.data.token);
+    Auth._user.gamertag = val;
+    Auth.renderWidget();
+    closeModal('profile-overlay');
+    showToast('Gamertag aggiornato!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============================================================
 // VOTER IDENTITY
 // ============================================================
 function getVoterKey() {
@@ -1393,7 +1669,11 @@ async function apiPost(action, body = {}) {
 
   const pathMap = { createBuild: 'builds', vote: `builds/${body.id||''}/vote` };
   const url     = `${API_BASE}/${pathMap[action] || action}`;
-  const res     = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res     = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+    body: JSON.stringify(body)
+  });
   const json    = await res.json();
   if (!json.ok) throw new Error(json.error || 'Errore API');
   return json.data;
@@ -1415,7 +1695,8 @@ const MODE_LABEL = { arena:'Arena', pve:'PvE', war:'War', rift:'Rift' };
 function modeLabel(m)      { return MODE_LABEL[m] || m; }
 function formatDate(iso)   { if (!iso) return ''; return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}); }
 function truncate(s, n)    { return s && s.length > n ? s.slice(0,n).trimEnd()+'…' : (s||''); }
-function heroList(b)       { return [b.hero1,b.hero2,b.hero3].filter(Boolean).join(' + ') || '—'; }
+function partyHeroes(b)    { return [b.hero1,b.hero2].filter(Boolean).join(' + ') || null; }
+function partyServants(b)  { return [b.servant1,b.servant2].filter(Boolean).join(' + ') || null; }
 function scoreClass(s)     { return s > 0 ? 'pos' : s < 0 ? 'neg' : 'neu'; }
 
 // ============================================================
@@ -1492,7 +1773,8 @@ function buildCard(b) {
       <h3 class="card-title">${b.title}</h3>
       <div class="card-info">
         <div class="info-row"><span class="info-icon">⚔</span><span class="info-val">${b.weapon || '—'}</span></div>
-        <div class="info-row"><span class="info-icon">👥</span><span>${heroes}</span></div>
+        ${partyHeroes(b)   ? `<div class="info-row"><span class="info-icon">👤</span><span>${partyHeroes(b)}</span></div>` : ''}
+        ${partyServants(b) ? `<div class="info-row"><span class="info-icon">🐾</span><span>${partyServants(b)}</span></div>` : ''}
         ${b.charms ? `<div class="info-row"><span class="info-icon">✨</span><span>${truncate(b.charms,60)}</span></div>` : ''}
       </div>
       ${b.description ? `<p class="card-desc">${truncate(b.description,115)}</p>` : ''}
@@ -1678,7 +1960,8 @@ function renderDetailBody(b) {
   const votes  = getVotes();
   const voted  = votes[b.id];
   const score  = b.upvotes - b.downvotes;
-  const heroes = [b.hero1, b.hero2, b.hero3].filter(Boolean);
+  const heroes   = [b.hero1, b.hero2].filter(Boolean);
+  const servants = [b.servant1, b.servant2].filter(Boolean);
 
   const slot = (icon, label, val) => `
     <div class="equip-slot ${val ? '' : 'empty'}">
@@ -1707,17 +1990,20 @@ function renderDetailBody(b) {
       <div class="equip-grid">
         ${slot('⚔','Arma',    b.weapon)}
         ${slot('🪖','Elmo',    b.helmet)}
-        ${slot('🛡','Corazza', b.chest)}
+        ${slot('🦺','Spalle',  b.spalle)}
+        ${slot('🛡','Busto',   b.chest)}
+        ${slot('💪','Braccia', b.braccia)}
         ${slot('🧤','Guanti',  b.gloves)}
-        ${slot('👢','Stivali', b.boots)}
+        ${slot('🦵','Gambe',   b.boots)}
       </div>
     </div>
 
-    ${heroes.length ? `
+    ${(heroes.length || servants.length) ? `
     <div class="detail-section">
-      <div class="section-label">👥 Eroi</div>
+      <div class="section-label">👥 Compagnia</div>
       <div class="heroes-row">
-        ${heroes.map(h => `<span class="hero-chip">👤 ${h}</span>`).join('')}
+        ${heroes.map(h   => `<span class="hero-chip">👤 ${h}</span>`).join('')}
+        ${servants.map(s => `<span class="hero-chip">🐾 ${s}</span>`).join('')}
       </div>
     </div>` : ''}
 
@@ -1791,12 +2077,15 @@ async function submitBuild(event) {
     author:      document.getElementById('f-author').value.trim(),
     weapon:      document.getElementById('f-weapon').value.trim(),
     helmet:      document.getElementById('f-helmet').value.trim(),
+    spalle:      document.getElementById('f-spalle').value.trim(),
     chest:       document.getElementById('f-chest').value.trim(),
+    braccia:     document.getElementById('f-braccia').value.trim(),
     gloves:      document.getElementById('f-gloves').value.trim(),
     boots:       document.getElementById('f-boots').value.trim(),
     hero1:       document.getElementById('f-hero1').value.trim(),
     hero2:       document.getElementById('f-hero2').value.trim(),
-    hero3:       document.getElementById('f-hero3').value.trim(),
+    servant1:    document.getElementById('f-servant1').value.trim(),
+    servant2:    document.getElementById('f-servant2').value.trim(),
     charms:      document.getElementById('f-charms').value.trim(),
     description: document.getElementById('f-desc').value.trim()
   };
@@ -1836,10 +2125,22 @@ function showToast(msg, type = 'info') {
 // ============================================================
 // OVERLAY CLICK / KEYBOARD
 // ============================================================
+function openModal(id) {
+  const overlay = document.getElementById(id);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  Anim.modalOpen(overlay);
+}
+function closeModal(id) {
+  const overlay = document.getElementById(id);
+  Anim.modalClose(overlay, () => { overlay.classList.remove('open'); document.body.style.overflow = ''; });
+}
+
 function overlayClick(ev, id) {
   if (ev.target.id === id) {
     if (id === 'create-overlay') closeCreateModal();
     else if (id === 'detail-overlay') closeDetailModal();
+    else closeModal(id);
   }
 }
 
@@ -1870,7 +2171,7 @@ document.getElementById('f-desc').addEventListener('input', e => {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Con defer, GSAP e particles.js sono già disponibili al DOMContentLoaded
+  Auth.init();
   initParticles();
   Anim.header();
 
