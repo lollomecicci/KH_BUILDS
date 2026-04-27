@@ -69,7 +69,7 @@ In produzione il frontend è servito dallo stesso Express → `API_BASE = '/api'
 | `DISCORD_CLIENT_SECRET` | Secret app Discord | uguale |
 | `GOOGLE_CLIENT_ID` | ID app Google | uguale |
 | `GOOGLE_CLIENT_SECRET` | Secret app Google | uguale |
-| `ANTHROPIC_API_KEY` | *(opzionale)* | necessario per AI screenshot parsing |
+| `GEMINI_API_KEY` | *(opzionale)* | Gemini free tier — aistudio.google.com/apikey |
 
 ### Fly.io — secrets attivi
 ```bash
@@ -336,6 +336,7 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 | PATCH | `/api/admin/items/:type/:id/status` | Admin | |
 | GET | `/api/admin/users` | Admin | search, page |
 | PATCH | `/api/admin/users/:id/role` | Admin | `{ role }` |
+| POST | `/api/ai/parse-item` | Contributor | `{ image: base64, mimeType }` → campi item |
 | GET | `/health` | — | |
 
 ---
@@ -352,7 +353,11 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 - Filtro status (Verificati / In attesa / Tutti) + ricerca
 - Item grid con rarity badge, status badge, confirm/flag buttons
 - FAB "＋ Contribuisci" (visibile solo a contributor/mod/admin)
-- Modal: `#submit-item-overlay` (form dinamico per tipo, campi mitico condizionali)
+- Modal: `#submit-item-overlay` — form dinamico per tipo + **zona screenshot AI**
+  - Drag&drop / file picker → preview thumbnail
+  - "✨ Analizza con AI" → chiama `/api/ai/parse-item` → pre-compila tutti i campi
+  - Auto-switch al tab tipo corretto (weapons/armor/ecc.)
+  - Campi mitico condizionali (forte_contro visibile solo se rarity=mitico)
 
 ### Sezione 👑 Admin (solo admin)
 - Tabella utenti: avatar, gamertag, provider, ruolo (dropdown), contributor flag, data
@@ -380,6 +385,7 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 "dotenv": "^16",
 "express": "^4.21",
 "jsonwebtoken": "^9.0"
+// Gemini: chiamata diretta via fetch(), nessun SDK aggiuntivo
 ```
 
 ### db.js — funzioni esportate
@@ -436,7 +442,6 @@ npm run dev   # http://localhost:3000
 
 ## TODO / Prossimi step
 
-- [ ] **AI Screenshot Parsing**: `POST /api/ai/parse-item` — Claude Vision legge screenshot → pre-compila form
 - [ ] Setup OAuth: configurare app Discord + Google, impostare secrets su Fly.io
 - [ ] Simulatore stat (combina equipaggiamento + set bonus + eroi)
 - [ ] Suggeritore build per modalità
