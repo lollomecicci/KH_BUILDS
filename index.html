@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>KH Builds — Database Build Knighthood</title>
 
   <!-- Fonts -->
@@ -1121,6 +1121,23 @@
 
     .admin-pagination { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 16px 0; }
 
+    .admin-tab-bar { display: flex; gap: 4px; padding: 14px 0 0; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+    .admin-tab {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--text2); font-family: 'Rajdhani', sans-serif; font-size: .9rem; font-weight: 600;
+      padding: 6px 16px 10px; cursor: pointer; transition: var(--transition);
+    }
+    .admin-tab:hover { color: var(--text); }
+    .admin-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    .user-action-btn {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text2); font-size: .78rem; padding: 3px 9px; cursor: pointer;
+      transition: var(--transition); font-family: 'Rajdhani', sans-serif; font-weight: 600;
+    }
+    .user-action-btn:hover { border-color: var(--border-h); color: var(--text); }
+    .user-action-btn.danger:hover { border-color: rgba(229,62,62,.6); color: #fc8181; }
+
     /* ============================================================
        ONBOARDING MODAL
     ============================================================ */
@@ -1292,6 +1309,8 @@
     .confirm-btn.ok:hover  { background: rgba(56,161,105,.15); border-color: rgba(56,161,105,.5); color: #68d391; }
     .confirm-btn.bad:hover { background: rgba(229,62,62,.12);  border-color: rgba(229,62,62,.5);  color: #fc8181; }
     .confirm-btn:disabled  { opacity: .35; cursor: not-allowed; }
+    .confirm-btn.admin-ok  { border-color: rgba(56,161,105,.45); color: #68d391; }
+    .confirm-btn.admin-bad { border-color: rgba(229,62,62,.45); color: #fc8181; }
 
     /* Screenshot drop zone */
     .screenshot-zone {
@@ -1379,19 +1398,231 @@
     /* ============================================================
        RESPONSIVE
     ============================================================ */
-    @media (max-width: 640px) {
-      .header-inner    { padding: 12px 16px; }
-      .header-titles h1{ font-size: 1.1rem; }
+    @media (max-width: 900px) {
+      .container { padding: 0 14px; }
+      .header-inner { gap: 10px; }
       .header-ornament { display: none; }
-      .filter-inner    { gap: 8px; }
-      .mode-tabs       { overflow-x: auto; scrollbar-width: none; }
+      .builds-grid,
+      .item-grid { grid-template-columns: 1fr; gap: 12px; }
+      .db-filter-inner { align-items: stretch; }
+      .db-type-tabs { width: 100%; overflow-x: auto; scrollbar-width: none; }
+      .db-type-tabs::-webkit-scrollbar { display: none; }
+      .db-tab { flex: 0 0 auto; min-height: 42px; }
+      .search-wrap { max-width: none; }
+    }
+    #iw-name, #ia-name, #ih-name, #is-name, #ig-name { text-transform: uppercase; }
+
+    @media (max-width: 640px) {
+      body { font-size: 15px; background-size: 240% 240%; }
+      #particles-js { display: none; }
+      #vignette { background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.45) 100%); }
+
+      .container { padding: 0 12px; }
+      .site-header { overflow: visible; }
+      .header-inner {
+        padding: 10px 12px 8px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .header-brand { gap: 9px; min-width: 0; }
+      .header-logo { font-size: 24px; }
+      .header-titles { min-width: 0; }
+      .header-titles h1{ font-size: 1.02rem; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-titles span { display: none; }
+      .header-ornament { display: none; }
+      .auth-area { grid-column: 2; grid-row: 1; min-width: 0; }
+      #auth-widget { display: flex; justify-content: flex-end; min-width: 0; }
+      #auth-widget .btn { min-height: 40px; justify-content: center; padding: 8px 10px; }
+      .user-chip { max-width: 150px; padding: 5px 10px 5px 5px; }
+      .user-gamertag { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #fab-inline { display: none !important; }
+
+      .section-nav {
+        grid-column: 1 / -1;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+      }
+      .section-nav::-webkit-scrollbar { display: none; }
+      .section-tab {
+        flex: 1 0 auto;
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: .88rem;
+      }
+
+      .stats-bar { padding: 7px 0; }
+      .stats-inner { gap: 7px; padding-bottom: 1px; }
+      .stat-chip { padding: 6px 11px; font-size: .78rem; }
+      .stat-chip .num { font-size: .92rem; }
+
+      .filter-bar,
+      .db-filter-bar {
+        position: sticky;
+        top: 100px;
+        z-index: 60;
+        padding: 9px 0;
+        background: rgba(8,8,15,.94);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .filter-inner,
+      .db-filter-inner {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .mode-tabs,
+      .db-type-tabs {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 4px;
+      }
       .mode-tabs::-webkit-scrollbar { display: none; }
-      .tab             { padding: 5px 10px; font-size: .82rem; }
-      .builds-grid     { grid-template-columns: 1fr; }
-      .form-grid       { grid-template-columns: 1fr; }
+      .tab,
+      .db-tab {
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: .84rem;
+        white-space: nowrap;
+        flex: 1 0 auto;
+      }
+      .filter-select,
+      .search-input {
+        min-height: 44px;
+        font-size: 1rem;
+      }
+      .results-count { margin-left: 0; text-align: center; }
+
+      .main { padding: 16px 0 96px; }
+      .builds-grid,
+      .item-grid { grid-template-columns: 1fr; gap: 12px; }
+      .build-card,
+      .item-card {
+        border-radius: 10px;
+        padding: 14px;
+        gap: 10px;
+      }
+      .build-card:hover,
+      .item-card:hover { transform: none; }
+      .card-title { font-size: 1rem; }
+      .card-info { gap: 6px; }
+      .info-row { font-size: .9rem; align-items: flex-start; }
+      .card-footer,
+      .item-card-footer {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .vote-row,
+      .confirm-row { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .vote-btn,
+      .confirm-btn {
+        min-height: 42px;
+        justify-content: center;
+        font-size: .95rem;
+      }
+      .item-card-top { gap: 6px; }
+      .item-name { flex-basis: 100%; font-size: 1rem; }
+      .item-stats { gap: 8px; font-size: .9rem; }
+      .item-stat,
+      .item-tag { line-height: 1.35; }
+
+      .pagination { padding-top: 22px; gap: 6px; flex-wrap: wrap; }
+      .page-btn { min-width: 42px; height: 42px; }
+
+      .modal-overlay {
+        padding: 0;
+        align-items: stretch;
+      }
+      .modal {
+        max-width: none !important;
+        min-height: 100dvh;
+        margin: 0;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+      }
+      .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgba(15,15,30,.96);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 14px 14px 12px;
+      }
+      .modal-header h2 { font-size: 1rem; }
+      .modal-close { min-width: 42px; min-height: 42px; }
+      .modal-body { padding: 14px; }
+      .form-section { margin-bottom: 18px; }
+      .section-label { font-size: .7rem; margin-bottom: 10px; }
+      .form-grid { grid-template-columns: 1fr; gap: 11px; }
       .form-grid .full { grid-column: 1; }
-      .fab             { bottom: 16px; right: 16px; padding: 13px 18px; font-size: .9rem; }
-      .search-wrap     { max-width: 100%; }
+      .form-input,
+      .form-select,
+      .form-textarea {
+        min-height: 44px;
+        font-size: 1rem;
+        padding: 10px 12px;
+      }
+      .form-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background: rgba(15,15,30,.96);
+        border-top: 1px solid var(--border);
+        margin: 16px -14px -14px;
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .form-actions .btn {
+        min-height: 44px;
+        justify-content: center;
+        padding: 10px 12px;
+      }
+
+      .type-selector { overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+      .type-selector::-webkit-scrollbar { display: none; }
+      .type-btn { flex: 0 0 auto; min-height: 40px; }
+      .screenshot-zone { padding: 18px 12px; margin-bottom: 12px; }
+      .screenshot-preview img { max-height: 240px; }
+      .screenshot-preview-actions { flex-wrap: wrap; }
+      .ai-parse-btn { min-height: 40px; justify-content: center; }
+
+      .fab {
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        width: auto;
+        justify-content: center;
+        min-height: 50px;
+        padding: 13px 16px;
+        font-size: .95rem;
+        border-radius: 14px;
+      }
+      .toast-container {
+        left: 12px;
+        right: 12px;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+      }
+      .toast { width: 100%; }
+      .search-wrap { max-width: 100%; min-width: 0; }
+      .state-box { padding: 42px 16px; }
+    }
+
+    @media (max-width: 380px) {
+      .header-titles h1 { font-size: .94rem; }
+      .section-tab,
+      .tab,
+      .db-tab { font-size: .8rem; padding-left: 10px; padding-right: 10px; }
+      .form-actions { grid-template-columns: 1fr; }
     }
 
     /* ============================================================
@@ -1566,33 +1797,131 @@
         <div class="admin-title">👑 Pannello Amministrazione</div>
         <div class="admin-sub">Gestisci utenti, ruoli e permessi</div>
       </div>
-      <div class="admin-search-bar">
-        <div class="search-wrap" style="flex:1;max-width:320px">
-          <span class="search-icon">🔍</span>
-          <input type="text" class="search-input" id="admin-search"
-                 placeholder="Cerca per gamertag o provider..." autocomplete="off" />
+      <div class="admin-tab-bar">
+        <button class="admin-tab active" id="admin-tab-users" onclick="switchAdminTab('users')">👥 Utenti</button>
+        <button class="admin-tab" id="admin-tab-banned" onclick="switchAdminTab('banned')" style="display:none">🚫 Bannati</button>
+      </div>
+
+      <!-- TAB: UTENTI -->
+      <div id="admin-panel-users">
+        <div class="admin-search-bar">
+          <div class="search-wrap" style="flex:1;max-width:320px">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="admin-search"
+                   placeholder="Cerca per gamertag o provider..." autocomplete="off" />
+          </div>
+          <span id="admin-user-count" style="color:var(--text2);font-size:.85rem"></span>
         </div>
-        <span id="admin-user-count" style="color:var(--text2);font-size:.85rem"></span>
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Utente</th>
+                <th>Provider</th>
+                <th>Ruolo</th>
+                <th>Contributore</th>
+                <th>Iscritto</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+        <div class="admin-pagination" id="admin-pagination"></div>
       </div>
-      <div class="users-table-wrap">
-        <table class="users-table">
-          <thead>
-            <tr>
-              <th>Utente</th>
-              <th>Provider</th>
-              <th>Ruolo</th>
-              <th>Contributore</th>
-              <th>Iscritto</th>
-              <th>Azioni</th>
-            </tr>
-          </thead>
-          <tbody id="users-tbody"></tbody>
-        </table>
+
+      <!-- TAB: BANNATI (solo admin) -->
+      <div id="admin-panel-banned" style="display:none">
+        <div style="padding:12px 0;border-bottom:1px solid var(--border);color:var(--text2);font-size:.85rem">
+          Account bloccati dalla piattaforma
+        </div>
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Giocatore</th>
+                <th>Provider</th>
+                <th>Email</th>
+                <th>Motivo</th>
+                <th>Bannato da</th>
+                <th>Data</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="banned-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Caricamento...</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="admin-pagination" id="admin-pagination"></div>
     </div>
   </main>
 </div><!-- /admin-section -->
+
+<!-- MODAL — MODIFICA UTENTE -->
+<div class="modal-overlay" id="edit-user-overlay" onclick="overlayClick(event,'edit-user-overlay')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title">✏️ Modifica Utente</span>
+      <button class="modal-close" onclick="closeEditUser()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-id" />
+      <div class="form-group">
+        <label class="form-label">Gamertag</label>
+        <input type="text" class="form-input" id="edit-user-gamertag" maxlength="32" />
+      </div>
+      <div class="form-group" id="edit-user-role-group">
+        <label class="form-label">Ruolo</label>
+        <select class="form-input" id="edit-user-role">
+          <option value="user">👤 Utente</option>
+          <option value="mod">🛡 Moderatore</option>
+        </select>
+      </div>
+      <label class="contributor-checkbox-row" style="margin-top:12px">
+        <input type="checkbox" id="edit-user-contributor" />
+        <span class="contributor-checkbox-label">
+          <strong>Contributore</strong>
+          <span>Può inviare nuovi item al database</span>
+        </span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeEditUser()">Annulla</button>
+      <button class="btn-primary" onclick="saveUserEdit()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL — ELIMINA/BANNA UTENTE -->
+<div class="modal-overlay" id="delete-user-overlay" onclick="overlayClick(event,'delete-user-overlay')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title">🗑️ Elimina Utente</span>
+      <button class="modal-close" onclick="closeDeleteUser()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="delete-user-id" />
+      <p style="color:var(--text2);font-size:.9rem;margin:0 0 16px">
+        Stai per eliminare <strong id="delete-user-name" style="color:var(--text)"></strong>.
+        Questa azione non può essere annullata.
+      </p>
+      <label class="contributor-checkbox-row" style="margin-top:0">
+        <input type="checkbox" id="delete-user-ban" onchange="toggleBanReason(this.checked)" />
+        <span class="contributor-checkbox-label">
+          <strong>Banna l'account</strong>
+          <span>Impedisce il ri-accesso con questo profilo</span>
+        </span>
+      </label>
+      <div id="ban-reason-group" style="display:none;margin-top:12px">
+        <label class="form-label">Motivo del ban</label>
+        <input type="text" class="form-input" id="delete-user-reason" placeholder="es. spam, comportamento scorretto..." maxlength="200" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeDeleteUser()">Annulla</button>
+      <button class="btn-primary" style="background:rgba(229,62,62,.15);border-color:rgba(229,62,62,.4);color:#fc8181" onclick="confirmDeleteUser()">Elimina</button>
+    </div>
+  </div>
+</div>
 
 <!-- FAB -->
 <button class="fab" id="main-fab" onclick="onFabClick()" aria-label="Nuova build">
@@ -1851,7 +2180,7 @@
              ondragover="screenshotDragOver(event)" ondragleave="screenshotDragLeave(event)"
              ondrop="screenshotDrop(event)">
           <input type="file" id="screenshot-input" accept="image/jpeg,image/png,image/webp"
-                 onchange="screenshotSelected(event)" />
+                 onchange="screenshotSelected(event)" multiple />
           <div class="screenshot-zone-icon">📷</div>
           <div class="screenshot-zone-label">Trascina uno screenshot o <strong>clicca per selezionare</strong></div>
           <div class="screenshot-zone-hint">JPG / PNG / WEBP — il form viene compilato automaticamente dall'AI</div>
@@ -1864,6 +2193,7 @@
             <button type="button" class="ai-parse-btn" id="ai-parse-btn" onclick="runAiParse()">
               ✨ Analizza con AI
             </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('screenshot-input').click()">＋</button>
             <button type="button" class="btn btn-outline btn-sm" onclick="clearScreenshot()">✕</button>
           </div>
         </div>
@@ -1963,12 +2293,14 @@
               <input type="number" id="ih-armatura" class="form-input" placeholder="0" min="0" /></div>
             <div class="form-group"><label>PV</label>
               <input type="number" id="ih-pv" class="form-input" placeholder="0" min="0" /></div>
-            <div class="form-group full"><label>Potere 1</label>
-              <input type="text" id="ih-p1" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
-            <div class="form-group full"><label>Potere 2</label>
-              <input type="text" id="ih-p2" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
-            <div class="form-group full"><label>Potere 3</label>
-              <input type="text" id="ih-p3" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
+            <div class="form-group full"><label>Potere 1 - Nome</label>
+              <input type="text" id="ih-p1" class="form-input" placeholder="Nome potere" maxlength="100" /></div>
+            <div class="form-group full"><label>Potere 1 - Descrizione</label>
+              <textarea id="ih-p1-desc" class="form-textarea" rows="2" maxlength="400" placeholder="Cosa fa il potere..."></textarea></div>
+            <div class="form-group full"><label>Potere 2 - Nome</label>
+              <input type="text" id="ih-p2" class="form-input" placeholder="Nome potere" maxlength="100" /></div>
+            <div class="form-group full"><label>Potere 2 - Descrizione</label>
+              <textarea id="ih-p2-desc" class="form-textarea" rows="2" maxlength="400" placeholder="Cosa fa il potere..."></textarea></div>
           </div>
         </div>
 
@@ -2173,7 +2505,8 @@ const Auth = {
     }
 
     if (urlToken) localStorage.setItem('kh_jwt', urlToken);
-    if (urlError) showToast('Accesso fallito. Riprova.', 'error');
+    if (urlError === 'banned') showToast('Account bannato. Non è possibile accedere.', 'error');
+    else if (urlError) showToast('Accesso fallito. Riprova.', 'error');
 
     const token = localStorage.getItem('kh_jwt');
     if (token) {
@@ -2195,9 +2528,9 @@ const Auth = {
 
     this.renderWidget();
 
-    // Show admin tab if admin
+    // Show admin tab for mod and admin
     const adminTab = document.getElementById('admin-nav-tab');
-    if (adminTab) adminTab.style.display = (this._user?.role === 'admin') ? '' : 'none';
+    if (adminTab) adminTab.style.display = (['admin','mod'].includes(this._user?.role)) ? '' : 'none';
 
     // New user → onboarding
     if (isNewUser && this._user) {
@@ -2440,6 +2773,11 @@ async function loadAdminUsers(page = 1) {
 }
 
 function renderUserRow(u) {
+  const viewer   = Auth.user;
+  const rankMap  = { user: 0, mod: 1, admin: 2 };
+  const canEdit  = viewer && rankMap[viewer.role] > rankMap[u.role] && u.id !== viewer.userId;
+  const canDelete= viewer?.role === 'admin' && canEdit;
+
   const avatar = u.avatar_url
     ? `<img class="user-avatar-sm" src="${u.avatar_url}" alt="" />`
     : `<span class="user-avatar-placeholder-sm">👤</span>`;
@@ -2450,6 +2788,11 @@ function renderUserRow(u) {
     : `<span style="color:var(--text3);font-size:.8rem">—</span>`;
   const date = u.created_at ? new Date(u.created_at).toLocaleDateString('it-IT') : '—';
 
+  const actions = canEdit ? `
+    <button class="user-action-btn" onclick="openEditUser('${u.id}')">✏️ Modifica</button>
+    ${canDelete ? `<button class="user-action-btn danger" onclick="openDeleteUser('${u.id}','${u.gamertag.replace(/'/g,"\\'")}')" style="margin-left:4px">🗑️</button>` : ''}
+  ` : `<span style="color:var(--text3);font-size:.8rem">—</span>`;
+
   return `
     <tr data-uid="${u.id}">
       <td>
@@ -2457,37 +2800,152 @@ function renderUserRow(u) {
         <span style="font-weight:600">${u.gamertag}</span>
       </td>
       <td style="color:var(--text2)">${providerIcon[u.provider]||''} ${u.provider}</td>
-      <td>
-        <select class="role-select" onchange="setUserRole('${u.id}', this.value)" ${u.id === Auth.user?.userId ? 'disabled title="Non puoi modificare il tuo ruolo"' : ''}>
-          <option value="user"  ${u.role==='user' ?'selected':''}>👤 Utente</option>
-          <option value="mod"   ${u.role==='mod'  ?'selected':''}>🛡 Moderatore</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
-        </select>
-      </td>
+      <td><span class="role-badge role-${u.role}">${roleLabelMap[u.role]||u.role}</span></td>
       <td>${contrib}</td>
       <td style="color:var(--text2);font-size:.82rem">${date}</td>
-      <td>
-        <span class="role-badge role-${u.role}">${roleLabelMap[u.role]||u.role}</span>
-      </td>
+      <td>${actions}</td>
     </tr>`;
 }
 
-async function setUserRole(userId, role) {
+function openEditUser(userId) {
+  const u = adminState.users.find(x => x.id === userId);
+  if (!u) return;
+  document.getElementById('edit-user-id').value        = u.id;
+  document.getElementById('edit-user-gamertag').value  = u.gamertag;
+  document.getElementById('edit-user-contributor').checked = Boolean(u.contributor);
+
+  const roleGroup = document.getElementById('edit-user-role-group');
+  const roleSelect= document.getElementById('edit-user-role');
+  if (Auth.user?.role === 'admin') {
+    roleGroup.style.display = '';
+    roleSelect.value = u.role;
+  } else {
+    roleGroup.style.display = 'none';
+  }
+
+  document.getElementById('edit-user-overlay').style.display = 'flex';
+}
+
+function closeEditUser() {
+  document.getElementById('edit-user-overlay').style.display = 'none';
+}
+
+async function saveUserEdit() {
+  const id         = document.getElementById('edit-user-id').value;
+  const gamertag   = document.getElementById('edit-user-gamertag').value.trim();
+  const contributor= document.getElementById('edit-user-contributor').checked ? 1 : 0;
+  const body       = { gamertag, contributor };
+
+  if (Auth.user?.role === 'admin') {
+    body.role = document.getElementById('edit-user-role').value;
+  }
+
   try {
-    const res  = await fetch(`${API_BASE}/admin/users/${userId}/role`, {
+    const res  = await fetch(`${API_BASE}/admin/users/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
-      body: JSON.stringify({ role })
+      body: JSON.stringify(body)
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error);
-    showToast(`Ruolo aggiornato: ${role}`, 'success');
-    // Reload to refresh badges
-    setTimeout(() => loadAdminUsers(adminState.page), 400);
+    showToast('Utente aggiornato', 'success');
+    closeEditUser();
+    loadAdminUsers(adminState.page);
   } catch (err) {
     showToast(err.message, 'error');
-    loadAdminUsers(adminState.page);
   }
+}
+
+function openDeleteUser(userId, gamertag) {
+  document.getElementById('delete-user-id').value   = userId;
+  document.getElementById('delete-user-name').textContent = gamertag;
+  document.getElementById('delete-user-ban').checked = false;
+  document.getElementById('delete-user-reason').value = '';
+  document.getElementById('ban-reason-group').style.display = 'none';
+  document.getElementById('delete-user-overlay').style.display = 'flex';
+}
+
+function closeDeleteUser() {
+  document.getElementById('delete-user-overlay').style.display = 'none';
+}
+
+function toggleBanReason(checked) {
+  document.getElementById('ban-reason-group').style.display = checked ? '' : 'none';
+}
+
+async function confirmDeleteUser() {
+  const id     = document.getElementById('delete-user-id').value;
+  const doBan  = document.getElementById('delete-user-ban').checked;
+  const reason = document.getElementById('delete-user-reason').value.trim();
+  const body   = doBan ? { ban: { reason, banned_by: Auth.user?.gamertag || '' } } : {};
+
+  try {
+    const res  = await fetch(`${API_BASE}/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    showToast(doBan ? 'Utente eliminato e bannato' : 'Utente eliminato', 'success');
+    closeDeleteUser();
+    loadAdminUsers(adminState.page);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+const bannedState = { loaded: false };
+
+async function loadBannedList() {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/banned`, { headers: Auth.authHeader() });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    bannedState.loaded = true;
+    const tbody = document.getElementById('banned-tbody');
+    if (!json.data.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Nessun account bannato</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = json.data.map(b => {
+      const providerIcon = { discord: '🎮', google: '🔵' };
+      const date = b.banned_at ? new Date(b.banned_at).toLocaleDateString('it-IT') : '—';
+      return `<tr>
+        <td style="font-weight:600">${b.gamertag || '—'}</td>
+        <td style="color:var(--text2)">${providerIcon[b.provider]||''} ${b.provider}</td>
+        <td style="color:var(--text2);font-size:.82rem">${b.email || '—'}</td>
+        <td style="color:var(--text2);font-size:.82rem">${b.reason || '—'}</td>
+        <td style="color:var(--text2);font-size:.82rem">${b.banned_by || '—'}</td>
+        <td style="color:var(--text2);font-size:.82rem">${date}</td>
+        <td><button class="user-action-btn" onclick="unbanAccount('${b.id}')">🔓 Sblocca</button></td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function unbanAccount(id) {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/banned/${id}`, {
+      method: 'DELETE', headers: Auth.authHeader()
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    showToast('Account sbloccato', 'success');
+    loadBannedList();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function switchAdminTab(tab) {
+  document.getElementById('admin-panel-users').style.display  = tab === 'users'  ? '' : 'none';
+  document.getElementById('admin-panel-banned').style.display = tab === 'banned' ? '' : 'none';
+  document.getElementById('admin-tab-users').classList.toggle('active',  tab === 'users');
+  document.getElementById('admin-tab-banned').classList.toggle('active', tab === 'banned');
+  if (tab === 'banned' && !bannedState.loaded) loadBannedList();
 }
 
 function renderAdminPagination() {
@@ -2525,6 +2983,9 @@ function setSection(section) {
     if (!dbState.loaded) loadDatabase();
   } else if (section === 'admin') {
     fab.style.display = 'none';
+    // Show banned tab only for admins
+    const bannedTab = document.getElementById('admin-tab-banned');
+    if (bannedTab) bannedTab.style.display = Auth.user?.role === 'admin' ? '' : 'none';
     if (!adminState.loaded) loadAdminUsers();
   } else {
     fab.style.display = '';
@@ -2652,8 +3113,13 @@ function renderItemCard(item, type) {
     if (item.class2)   parts.push(`<span class="item-tag">${item.class2}</span>`);
     if (item.danni)    parts.push(`<span class="item-stat">⚔ <strong>${item.danni}</strong></span>`);
     if (item.pv)       parts.push(`<span class="item-stat">❤ <strong>${item.pv}</strong></span>`);
+    const powers = [
+      item.potere1 ? `<div class="item-stat"><strong>${item.potere1}</strong>${item.potere1_desc ? `: ${item.potere1_desc}` : ''}</div>` : '',
+      item.potere2 ? `<div class="item-stat"><strong>${item.potere2}</strong>${item.potere2_desc ? `: ${item.potere2_desc}` : ''}</div>` : ''
+    ].filter(Boolean).join('');
     statsHtml = `<div class="item-tags">${parts.filter(p=>p.includes('item-tag')).join('')}</div>
-      <div class="item-stats">${parts.filter(p=>p.includes('item-stat')).join('')}</div>`;
+      <div class="item-stats">${parts.filter(p=>p.includes('item-stat')).join('')}</div>
+      ${powers ? `<div style="display:flex;flex-direction:column;gap:5px">${powers}</div>` : ''}`;
   } else if (type === 'servants') {
     const vuln = item.vulnerabilities ? item.vulnerabilities.split(',').map(v=>`<span class="item-tag" style="border-color:rgba(229,62,62,.3);color:#fc8181">${v.trim()}</span>`).join('') : '';
     const res  = item.resistances     ? item.resistances.split(',').map(v=>`<span class="item-tag" style="border-color:rgba(56,161,105,.3);color:#68d391">${v.trim()}</span>`).join('') : '';
@@ -2674,6 +3140,23 @@ function renderItemCard(item, type) {
 
   const canConfirm = !local;
   const submitter  = item.submitted_by || 'Comunità';
+  const isAdmin = Auth.user?.role === 'admin';
+  const adminControls = isAdmin ? `
+        <div class="confirm-row">
+          <button class="confirm-btn" onclick="openAdminEditItem('${type}','${item.id}')"
+                  title="Modifica dati item">
+            Modifica
+          </button>
+          ${item.status === 'pending' ? `
+          <button class="confirm-btn admin-ok" onclick="adminSetItemStatus('${type}','${item.id}','verified')"
+                  title="Approva subito">
+            ✓ Approva
+          </button>
+          <button class="confirm-btn admin-bad" onclick="adminSetItemStatus('${type}','${item.id}','flagged')"
+                  title="Rifiuta e segna come errato">
+            ✗ Rifiuta
+          </button>` : ''}
+        </div>` : '';
 
   return `
     <div class="item-card" data-id="${item.id}" data-type="${type}">
@@ -2683,6 +3166,7 @@ function renderItemCard(item, type) {
         ${statusBadge(item.status)}
       </div>
       ${statsHtml ? `<div>${statsHtml}</div>` : ''}
+      ${adminControls}
       <div class="item-card-footer">
         <span class="item-submitter">👤 ${submitter}</span>
         ${item.status === 'pending' ? `
@@ -2698,6 +3182,47 @@ function renderItemCard(item, type) {
         </div>` : `<span style="font-size:.75rem;color:var(--text3)">${confirms} conferme</span>`}
       </div>
     </div>`;
+}
+
+async function adminSetItemStatus(type, id, status) {
+  if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  if (Auth.user?.role !== 'admin') { showToast('Solo admin può approvare direttamente.', 'error'); return; }
+  try {
+    const res  = await fetch(`${API_BASE}/admin/items/${type}/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ status })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    showToast(status === 'verified' ? '✓ Elemento approvato!' : '✗ Elemento rifiutato.', 'success');
+    loadDatabase();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function openAdminEditItem(type, id) {
+  if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  if (Auth.user?.role !== 'admin') { showToast('Solo admin può modificare gli item.', 'error'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/${type}/${id}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    resetSubmitItemForm();
+    editingItem = { type, id };
+    document.querySelector('#submit-item-overlay .modal-header h2').textContent = 'Modifica Item';
+    document.getElementById('submit-item-btn').textContent = 'Salva Modifiche';
+    document.querySelectorAll('#item-type-selector .type-btn').forEach(btn => btn.disabled = true);
+    setItemFormType(type);
+    clearScreenshot();
+    applyAiResult({ ...json.data, itemType: type, nodes_json: json.data.nodes });
+    openModal('submit-item-overlay');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 async function confirmItemFromUI(type, id, action) {
@@ -2731,6 +3256,7 @@ async function confirmItemFromUI(type, id, action) {
 // SUBMIT ITEM FORM
 // ============================================================
 let currentItemFormType = 'weapons';
+let editingItem = null; // { type, id }
 
 function openSubmitItemModal() {
   if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
@@ -2739,7 +3265,19 @@ function openSubmitItemModal() {
     openProfileModal();
     return;
   }
+  resetSubmitItemForm();
   openModal('submit-item-overlay');
+}
+
+function resetSubmitItemForm() {
+  editingItem = null;
+  const form = document.getElementById('submit-item-form');
+  if (form) form.reset();
+  document.querySelector('#submit-item-overlay .modal-header h2').textContent = '📚 Aggiungi al Database';
+  document.getElementById('submit-item-btn').textContent = '📚 Invia per Revisione';
+  document.querySelectorAll('#item-type-selector .type-btn').forEach(btn => btn.disabled = false);
+  setItemFormType('weapons');
+  clearScreenshot();
 }
 
 function setItemFormType(type) {
@@ -2769,7 +3307,7 @@ function toggleMiticoFields(formType) {
 // ============================================================
 // SCREENSHOT AI PARSING
 // ============================================================
-let screenshotData = null; // { base64, mimeType }
+let screenshotData = []; // [{ base64, mimeType, name, dataUrl }]
 
 function screenshotDragOver(e) {
   e.preventDefault();
@@ -2781,30 +3319,70 @@ function screenshotDragLeave() {
 function screenshotDrop(e) {
   e.preventDefault();
   screenshotDragLeave();
-  const file = e.dataTransfer?.files?.[0];
-  if (file) processScreenshotFile(file);
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (files.length) processScreenshotFiles(files);
 }
 function screenshotSelected(e) {
-  const file = e.target.files?.[0];
-  if (file) processScreenshotFile(file);
+  const files = Array.from(e.target.files || []);
+  if (files.length) processScreenshotFiles(files);
+}
+
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Impossibile leggere lo screenshot'));
+    img.src = dataUrl;
+  });
+}
+
+async function compressScreenshotDataUrl(dataUrl, mimeType) {
+  const img = await loadImage(dataUrl);
+  const maxSide = 1200;
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const outputType = mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
+  return canvas.toDataURL(outputType, outputType === 'image/jpeg' ? 0.82 : undefined);
+}
+
+async function processScreenshotFiles(files) {
+  for (const file of files) await processScreenshotFile(file);
 }
 
 function processScreenshotFile(file) {
   const VALID = ['image/jpeg','image/png','image/webp'];
   if (!VALID.includes(file.type)) { showToast('Formato non supportato (usa JPG/PNG/WEBP)', 'error'); return; }
   if (file.size > 10 * 1024 * 1024) { showToast('Immagine troppo grande (max 10MB)', 'error'); return; }
+  if (screenshotData.length >= 5) { showToast('Massimo 5 screenshot per analisi', 'error'); return; }
 
   const reader = new FileReader();
-  reader.onload = e => {
-    const dataUrl = e.target.result;
+  reader.onerror = () => {
+    showToast('Impossibile leggere lo screenshot', 'error');
+    clearScreenshot();
+  };
+  reader.onload = async e => {
+    let dataUrl = e.target.result;
+    try {
+      dataUrl = await compressScreenshotDataUrl(dataUrl, file.type);
+    } catch (err) {
+      showToast(err.message, 'error');
+      clearScreenshot();
+      return;
+    }
     // dataUrl = "data:image/jpeg;base64,XXXXX"
-    const base64  = dataUrl.split(',')[1];
-    screenshotData = { base64, mimeType: file.type };
+    const [meta, base64] = dataUrl.split(',');
+    const mimeType = meta.match(/^data:(.*?);base64$/)?.[1] || file.type;
+    screenshotData.push({ base64, mimeType, name: file.name, dataUrl });
 
-    document.getElementById('screenshot-thumb').src = dataUrl;
-    document.getElementById('screenshot-name').textContent = file.name;
-    document.getElementById('screenshot-zone').style.display    = 'none';
-    document.getElementById('screenshot-preview').style.display = '';
+    document.getElementById('screenshot-thumb').src = screenshotData[0].dataUrl;
+    document.getElementById('screenshot-name').textContent =
+      screenshotData.length === 1 ? file.name : `${screenshotData.length} screenshot caricati`;
+    document.getElementById('screenshot-zone').style.display    = '';
+    document.getElementById('screenshot-preview').style.display = 'block';
 
     const bar = document.getElementById('ai-result-bar');
     bar.style.display = 'none';
@@ -2814,16 +3392,21 @@ function processScreenshotFile(file) {
 }
 
 function clearScreenshot() {
-  screenshotData = null;
+  screenshotData = [];
   document.getElementById('screenshot-input').value = '';
   document.getElementById('screenshot-zone').style.display    = '';
   document.getElementById('screenshot-preview').style.display = 'none';
   const bar = document.getElementById('ai-result-bar');
   bar.style.display = 'none';
+  bar.className = 'ai-result-bar';
+
+  const btn = document.getElementById('ai-parse-btn');
+  btn.disabled = false;
+  btn.innerHTML = '✨ Analizza con AI';
 }
 
 async function runAiParse() {
-  if (!screenshotData) return;
+  if (!screenshotData.length) return;
   const btn = document.getElementById('ai-parse-btn');
   const bar = document.getElementById('ai-result-bar');
   btn.disabled = true;
@@ -2834,7 +3417,9 @@ async function runAiParse() {
     const res  = await fetch(`${API_BASE}/ai/parse-item`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
-      body: JSON.stringify({ image: screenshotData.base64, mimeType: screenshotData.mimeType })
+      body: JSON.stringify({
+        images: screenshotData.map(img => ({ image: img.base64, mimeType: img.mimeType }))
+      })
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error);
@@ -2898,8 +3483,9 @@ function applyAiResult(data) {
     set('ih-armatura', data.armatura);
     set('ih-pv',       data.pv);
     set('ih-p1',       data.potere1);
+    set('ih-p1-desc',  data.potere1_desc);
     set('ih-p2',       data.potere2);
-    set('ih-p3',       data.potere3);
+    set('ih-p2-desc',  data.potere2_desc);
   } else if (type === 'servants') {
     set('is-name',     data.name);
     set('is-rarity',   data.rarity);
@@ -2944,7 +3530,8 @@ function collectItemForm() {
     name: g('ih-name'), rarity: g('ih-rarity'),
     class1: g('ih-class1'), class2: g('ih-class2'), strong_vs: g('ih-strong'),
     danni: n('ih-danni'), armatura: n('ih-armatura'), pv: n('ih-pv'),
-    potere1: g('ih-p1'), potere2: g('ih-p2'), potere3: g('ih-p3')
+    potere1: g('ih-p1'), potere1_desc: g('ih-p1-desc'),
+    potere2: g('ih-p2'), potere2_desc: g('ih-p2-desc')
   };
   if (t === 'servants') return {
     name: g('is-name'), rarity: g('is-rarity'), type: g('is-type'),
@@ -2970,30 +3557,39 @@ async function submitItem(event) {
   const btn = document.getElementById('submit-item-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Invio...';
+  const submittedType = currentItemFormType;
+  const editTarget = editingItem;
 
   try {
     let body;
     try { body = collectItemForm(); } catch(e) { throw e; }
     if (!body.name) throw new Error('Il nome è obbligatorio');
+    body.name = body.name.toUpperCase();
 
     body.submitted_by = Auth.user?.gamertag || '';
 
-    const res  = await fetch(`${API_BASE}/${currentItemFormType}`, {
-      method: 'POST',
+    const res  = await fetch(editTarget
+      ? `${API_BASE}/admin/items/${editTarget.type}/${editTarget.id}`
+      : `${API_BASE}/${currentItemFormType}`, {
+      method: editTarget ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
       body: JSON.stringify(body)
     });
-    const json = await res.json();
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch { throw new Error('Risposta server non valida. Riprova tra qualche secondo.'); }
     if (!json.ok) throw new Error(json.error);
 
-    showToast('📚 Elemento inviato! Attende verifica della community.', 'success');
+    showToast(editTarget ? 'Modifiche salvate.' : '📚 Elemento inviato! Attende verifica della community.', 'success');
     closeModal('submit-item-overlay');
     document.getElementById('submit-item-form').reset();
     clearScreenshot();
 
-    if (currentSection === 'database' && dbState.type === currentItemFormType) {
+    if (currentSection === 'database') {
       document.getElementById('db-status-filter').value = 'pending';
-      loadDatabase();
+      if (dbState.type === submittedType) loadDatabase();
+      else setDbType(submittedType);
     }
   } catch (err) {
     showToast(err.message, 'error');
@@ -3529,6 +4125,7 @@ function openModal(id) {
   Anim.modalOpen(overlay);
 }
 function closeModal(id) {
+  if (id === 'submit-item-overlay') resetSubmitItemForm();
   const overlay = document.getElementById(id);
   Anim.modalClose(overlay, () => { overlay.classList.remove('open'); document.body.style.overflow = ''; });
 }

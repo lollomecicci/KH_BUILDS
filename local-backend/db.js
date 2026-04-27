@@ -57,7 +57,9 @@ async function initSchema() {
         armatura      REAL,
         pv            REAL,
         potere1       TEXT NOT NULL DEFAULT '',
+        potere1_desc  TEXT NOT NULL DEFAULT '',
         potere2       TEXT NOT NULL DEFAULT '',
+        potere2_desc  TEXT NOT NULL DEFAULT '',
         potere3       TEXT NOT NULL DEFAULT '',
         status        TEXT NOT NULL DEFAULT 'pending',
         submitted_by  TEXT NOT NULL DEFAULT '',
@@ -160,9 +162,25 @@ async function initSchema() {
       provider     TEXT NOT NULL,
       provider_id  TEXT NOT NULL,
       avatar_url   TEXT NOT NULL DEFAULT '',
+      email        TEXT NOT NULL DEFAULT '',
       role         TEXT NOT NULL DEFAULT 'user',
       contributor  INTEGER NOT NULL DEFAULT 0,
       created_at   TEXT NOT NULL,
+      UNIQUE(provider, provider_id)
+    )`,
+    args: []
+  });
+
+  await db.execute({
+    sql: `CREATE TABLE IF NOT EXISTS banned_accounts (
+      id          TEXT PRIMARY KEY,
+      provider    TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      email       TEXT NOT NULL DEFAULT '',
+      gamertag    TEXT NOT NULL DEFAULT '',
+      reason      TEXT NOT NULL DEFAULT '',
+      banned_by   TEXT NOT NULL DEFAULT '',
+      banned_at   TEXT NOT NULL,
       UNIQUE(provider, provider_id)
     )`,
     args: []
@@ -196,6 +214,9 @@ async function initSchema() {
     `ALTER TABLE gloves   ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE weapons  ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE armor_pieces ADD COLUMN flags     INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE heroes   ADD COLUMN potere1_desc  TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE heroes   ADD COLUMN potere2_desc  TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE users    ADD COLUMN email         TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await db.execute({ sql, args: [] }); } catch (_) { /* column already exists */ }
@@ -433,6 +454,95 @@ async function adminSetStatus(itemType, itemId, newStatus) {
   return { message: `Status aggiornato a ${newStatus}` };
 }
 
+async function adminUpdateItem(itemType, itemId, d) {
+  const table = ITEM_TABLES[itemType];
+  if (!table) throw new Error('Tipo item non valido');
+  if (!itemId) throw new Error('ID item mancante');
+
+  const exists = await db.execute({ sql: `SELECT id FROM ${table} WHERE id = ?`, args: [itemId] });
+  if (!exists.rows.length) throw new Error('Item non trovato');
+
+  if (itemType === 'weapons') {
+    const name = (d.name || '').trim().toUpperCase();
+    const rarity = (d.rarity || '').trim().toLowerCase();
+    if (!name) throw new Error('Nome arma obbligatorio');
+    if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+    await db.execute({
+      sql: `UPDATE weapons SET name=?, rarity=?, weapon_type=?, danni=?, forte_contro_1=?, forte_contro_2=?, talisman_slots=? WHERE id=?`,
+      args: [name, rarity, (d.weapon_type || '').trim(), d.danni != null ? Number(d.danni) : null,
+        (d.forte_contro_1 || '').trim(), (d.forte_contro_2 || '').trim(),
+        d.talisman_slots != null ? Number(d.talisman_slots) : 0, itemId]
+    });
+    return { id: itemId, message: 'Arma aggiornata' };
+  }
+
+  if (itemType === 'armor') {
+    const name = (d.name || '').trim().toUpperCase();
+    const slot = (d.slot || '').trim().toLowerCase();
+    const rarity = (d.rarity || '').trim().toLowerCase();
+    if (!name) throw new Error('Nome armatura obbligatorio');
+    if (!VALID_ARMOR_SLOTS.includes(slot)) throw new Error('Slot non valido');
+    if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+    const armor_set = (d.armor_set || '').trim().toLowerCase();
+    if (armor_set && !VALID_ARMOR_SETS.includes(armor_set)) throw new Error('Set armatura non valido');
+    await db.execute({
+      sql: `UPDATE armor_pieces SET name=?, slot=?, rarity=?, armatura=?, forte_contro=?, armor_set=?, talisman_slots=? WHERE id=?`,
+      args: [name, slot, rarity, d.armatura != null ? Number(d.armatura) : null,
+        (d.forte_contro || '').trim(), armor_set, d.talisman_slots != null ? Number(d.talisman_slots) : 0, itemId]
+    });
+    return { id: itemId, message: 'Armatura aggiornata' };
+  }
+
+  if (itemType === 'heroes') {
+    const name = (d.name || '').trim().toUpperCase();
+    const rarity = (d.rarity || '').trim().toLowerCase();
+    if (!name) throw new Error('Nome eroe obbligatorio');
+    if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+    await db.execute({
+      sql: `UPDATE heroes SET name=?, rarity=?, class1=?, class2=?, strong_vs=?, danni=?, armatura=?, pv=?, potere1=?, potere1_desc=?, potere2=?, potere2_desc=?, potere3=? WHERE id=?`,
+      args: [name, rarity, (d.class1 || '').trim(), (d.class2 || '').trim(), (d.strong_vs || '').trim(),
+        d.danni != null ? Number(d.danni) : null, d.armatura != null ? Number(d.armatura) : null, d.pv != null ? Number(d.pv) : null,
+        (d.potere1 || '').trim(), (d.potere1_desc || '').trim(),
+        (d.potere2 || '').trim(), (d.potere2_desc || '').trim(),
+        '', itemId]
+    });
+    return { id: itemId, message: 'Eroe aggiornato' };
+  }
+
+  if (itemType === 'servants') {
+    const name = (d.name || '').trim().toUpperCase();
+    const rarity = (d.rarity || '').trim().toLowerCase();
+    if (!name) throw new Error('Nome servitore obbligatorio');
+    if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+    await db.execute({
+      sql: `UPDATE servants SET name=?, rarity=?, type=?, tags=?, danni=?, armatura=?, pv=?, potere_nome=?, potere_desc=?, vulnerabilities=?, resistances=?, capture_glove=? WHERE id=?`,
+      args: [name, rarity, (d.type || '').trim(), (d.tags || '').trim(),
+        d.danni != null ? Number(d.danni) : null, d.armatura != null ? Number(d.armatura) : null, d.pv != null ? Number(d.pv) : null,
+        (d.potere_nome || '').trim(), (d.potere_desc || '').trim(), (d.vulnerabilities || '').trim(),
+        (d.resistances || '').trim(), (d.capture_glove || '').trim(), itemId]
+    });
+    return { id: itemId, message: 'Servitore aggiornato' };
+  }
+
+  if (itemType === 'gloves') {
+    const name = (d.name || '').trim().toUpperCase();
+    const rarity = (d.rarity || '').trim().toLowerCase();
+    if (!name) throw new Error('Nome guanto obbligatorio');
+    if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
+    let nodes = d.nodes_json || d.nodes || [];
+    if (typeof nodes === 'string') { try { nodes = JSON.parse(nodes); } catch { nodes = []; } }
+    if (!Array.isArray(nodes)) throw new Error('nodes deve essere un array');
+    await db.execute({
+      sql: `UPDATE gloves SET name=?, rarity=?, danni=?, description=?, nodes_json=?, nodi_totali=? WHERE id=?`,
+      args: [name, rarity, d.danni != null ? Number(d.danni) : null, (d.description || '').trim(),
+        JSON.stringify(nodes), d.nodi_totali != null ? Number(d.nodi_totali) : null, itemId]
+    });
+    return { id: itemId, message: 'Guanto aggiornato' };
+  }
+
+  throw new Error('Tipo item non valido');
+}
+
 // ─── Weapons ─────────────────────────────────────────────────────────────────
 
 const VALID_RARITIES      = ['comune','raro','epico','leggendario','unico'];
@@ -483,7 +593,7 @@ async function getWeapon(id) {
 }
 
 async function createWeapon(d) {
-  const name        = (d.name        || '').trim();
+  const name        = (d.name        || '').trim().toUpperCase();
   const rarity      = (d.rarity      || '').trim().toLowerCase();
   const weapon_type = (d.weapon_type || '').trim();
   if (!name)                                    throw new Error('Nome arma obbligatorio');
@@ -522,7 +632,9 @@ function heroToObj(row) {
     armatura:      n('armatura'),
     pv:            n('pv'),
     potere1:       s('potere1'),
+    potere1_desc:  s('potere1_desc'),
     potere2:       s('potere2'),
+    potere2_desc:  s('potere2_desc'),
     potere3:       s('potere3'),
     status:        s('status'),
     submitted_by:  s('submitted_by'),
@@ -554,15 +666,15 @@ async function getHero(id) {
 }
 
 async function createHero(d) {
-  const name   = (d.name   || '').trim();
+  const name   = (d.name   || '').trim().toUpperCase();
   const rarity = (d.rarity || '').trim().toLowerCase();
   if (!name)                            throw new Error('Nome eroe obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO heroes (id,name,rarity,class1,class2,strong_vs,danni,armatura,pv,potere1,potere2,potere3,status,submitted_by,confirmations,flags,timestamp)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
+    sql: `INSERT INTO heroes (id,name,rarity,class1,class2,strong_vs,danni,armatura,pv,potere1,potere1_desc,potere2,potere2_desc,potere3,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, rarity,
       (d.class1    ||'').trim(), (d.class2    ||'').trim(),
@@ -570,7 +682,9 @@ async function createHero(d) {
       d.danni    != null ? Number(d.danni)    : null,
       d.armatura != null ? Number(d.armatura) : null,
       d.pv       != null ? Number(d.pv)       : null,
-      (d.potere1||'').trim(), (d.potere2||'').trim(), (d.potere3||'').trim(),
+      (d.potere1||'').trim(), (d.potere1_desc||'').trim(),
+      (d.potere2||'').trim(), (d.potere2_desc||'').trim(),
+      '',
       (d.submitted_by||'').trim(),
       new Date().toISOString()
     ]
@@ -628,7 +742,7 @@ async function getServant(id) {
 }
 
 async function createServant(d) {
-  const name   = (d.name   || '').trim();
+  const name   = (d.name   || '').trim().toUpperCase();
   const rarity = (d.rarity || '').trim().toLowerCase();
   if (!name)                            throw new Error('Nome servitore obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
@@ -700,7 +814,7 @@ async function getGlove(id) {
 }
 
 async function createGlove(d) {
-  const name   = (d.name   || '').trim();
+  const name   = (d.name   || '').trim().toUpperCase();
   const rarity = (d.rarity || '').trim().toLowerCase();
   if (!name)                            throw new Error('Nome guanto obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
@@ -772,7 +886,7 @@ async function getArmorPiece(id) {
 }
 
 async function createArmorPiece(d) {
-  const name   = (d.name   || '').trim();
+  const name   = (d.name   || '').trim().toUpperCase();
   const slot   = (d.slot   || '').trim().toLowerCase();
   const rarity = (d.rarity || '').trim().toLowerCase();
   if (!name)                                  throw new Error('Nome armatura obbligatorio');
@@ -808,13 +922,21 @@ function userToObj(row) {
     provider:    String(row.provider),
     provider_id: String(row.provider_id || ''),
     avatar_url:  String(row.avatar_url  || ''),
+    email:       String(row.email       || ''),
     role:        String(row.role        || 'user'),
     contributor: Number(row.contributor || 0),
     created_at:  String(row.created_at  || ''),
   };
 }
 
-async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
+async function upsertUser({ provider, provider_id, gamertag, avatar_url, email = '' }) {
+  // Check ban before anything else
+  const banCheck = await db.execute({
+    sql:  'SELECT id FROM banned_accounts WHERE provider = ? AND provider_id = ?',
+    args: [provider, provider_id]
+  });
+  if (banCheck.rows.length) throw new Error('BANNED');
+
   const existing = await db.execute({
     sql:  'SELECT * FROM users WHERE provider = ? AND provider_id = ?',
     args: [provider, provider_id]
@@ -823,10 +945,10 @@ async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
   if (existing.rows.length) {
     const u = existing.rows[0];
     await db.execute({
-      sql:  'UPDATE users SET avatar_url = ? WHERE id = ?',
-      args: [avatar_url, u.id]
+      sql:  'UPDATE users SET avatar_url = ?, email = ? WHERE id = ?',
+      args: [avatar_url, email, u.id]
     });
-    return { ...userToObj(u), avatar_url, is_new: false };
+    return { ...userToObj(u), avatar_url, email, is_new: false };
   }
 
   // First user ever registered becomes admin automatically
@@ -835,10 +957,10 @@ async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, role, contributor, created_at) VALUES (?,?,?,?,?,?,?,?)',
-    args: [id, gamertag, provider, provider_id, avatar_url, role, role === 'admin' ? 1 : 0, new Date().toISOString()]
+    sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, email, role, contributor, created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+    args: [id, gamertag, provider, provider_id, avatar_url, email, role, role === 'admin' ? 1 : 0, new Date().toISOString()]
   });
-  return { id, gamertag, provider, provider_id, avatar_url, role, contributor: role === 'admin' ? 1 : 0, is_new: true };
+  return { id, gamertag, provider, provider_id, avatar_url, email, role, contributor: role === 'admin' ? 1 : 0, is_new: true };
 }
 
 async function getUserById(userId) {
@@ -865,12 +987,90 @@ async function setContributor(userId, value) {
 }
 
 const VALID_ROLES = ['user', 'mod', 'admin'];
+const ROLE_RANK   = { user: 0, mod: 1, admin: 2 };
 
 async function updateUserRole(targetId, role) {
   if (!VALID_ROLES.includes(role)) throw new Error('Ruolo non valido (user/mod/admin)');
   const res = await db.execute({ sql: 'UPDATE users SET role = ? WHERE id = ?', args: [role, targetId] });
   if (!res.rowsAffected) throw new Error('Utente non trovato');
   return await getUserById(targetId);
+}
+
+async function updateUserDetails(editorRole, targetId, data) {
+  const target = await getUserById(targetId);
+  if (!target) throw new Error('Utente non trovato');
+  if (ROLE_RANK[editorRole] === undefined) throw new Error('Ruolo editor non valido');
+  if (ROLE_RANK[target.role] >= ROLE_RANK[editorRole]) throw new Error('Non puoi modificare questo utente');
+
+  const sets = [];
+  const args = [];
+
+  if (data.gamertag !== undefined) {
+    const g = (data.gamertag || '').trim();
+    if (!g || g.length < 2) throw new Error('Gamertag troppo corto (min 2)');
+    if (g.length > 32)       throw new Error('Gamertag troppo lungo (max 32)');
+    sets.push('gamertag = ?'); args.push(g);
+  }
+
+  if (data.contributor !== undefined) {
+    sets.push('contributor = ?'); args.push(data.contributor ? 1 : 0);
+  }
+
+  if (data.role !== undefined) {
+    if (editorRole !== 'admin') throw new Error('Solo admin può cambiare il ruolo');
+    if (!VALID_ROLES.includes(data.role)) throw new Error('Ruolo non valido');
+    if (data.role === 'admin') throw new Error('Non puoi promuovere un utente ad admin');
+    sets.push('role = ?'); args.push(data.role);
+  }
+
+  if (!sets.length) throw new Error('Nessun campo da aggiornare');
+  args.push(targetId);
+  await db.execute({ sql: `UPDATE users SET ${sets.join(', ')} WHERE id = ?`, args });
+  return await getUserById(targetId);
+}
+
+async function deleteUser(editorRole, targetId, banData) {
+  const target = await getUserById(targetId);
+  if (!target) throw new Error('Utente non trovato');
+  if (ROLE_RANK[target.role] >= ROLE_RANK[editorRole]) throw new Error('Non puoi eliminare questo utente');
+
+  if (banData) {
+    await db.execute({
+      sql:  `INSERT OR REPLACE INTO banned_accounts (id, provider, provider_id, email, gamertag, reason, banned_by, banned_at) VALUES (?,?,?,?,?,?,?,?)`,
+      args: [
+        crypto.randomUUID(),
+        target.provider, target.provider_id,
+        target.email || banData.email || '',
+        target.gamertag,
+        banData.reason || '',
+        banData.banned_by || '',
+        new Date().toISOString()
+      ]
+    });
+  }
+
+  await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [targetId] });
+  return { message: 'Utente eliminato' };
+}
+
+async function listBannedAccounts() {
+  const res = await db.execute({ sql: 'SELECT * FROM banned_accounts ORDER BY banned_at DESC', args: [] });
+  return res.rows.map(row => ({
+    id:          String(row.id),
+    provider:    String(row.provider),
+    provider_id: String(row.provider_id),
+    email:       String(row.email    || ''),
+    gamertag:    String(row.gamertag || ''),
+    reason:      String(row.reason   || ''),
+    banned_by:   String(row.banned_by || ''),
+    banned_at:   String(row.banned_at || ''),
+  }));
+}
+
+async function unbanAccount(id) {
+  const res = await db.execute({ sql: 'DELETE FROM banned_accounts WHERE id = ?', args: [id] });
+  if (!res.rowsAffected) throw new Error('Account bannato non trovato');
+  return { message: 'Account sbloccato' };
 }
 
 async function listUsers({ search = '', page = 1, limit = 50 } = {}) {
@@ -901,6 +1101,7 @@ module.exports = {
   listHeroes, getHero, createHero,
   listServants, getServant, createServant,
   listGloves, getGlove, createGlove,
-  confirmItem, adminSetStatus,
+  confirmItem, adminSetStatus, adminUpdateItem,
   upsertUser, getUserById, updateGamertag, setContributor, updateUserRole, listUsers,
+  updateUserDetails, deleteUser, listBannedAccounts, unbanAccount,
 };

@@ -13,8 +13,15 @@ const PORT = parseInt(process.env.PORT || '3000');
 
 const app = express();
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.resolve(__dirname, '..')));
+
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json(fail('Payload troppo grande. Riduci dimensione screenshot e riprova.'));
+  }
+  return next(err);
+});
 
 app.use((req, _res, next) => {
   if (req.path.startsWith('/api')) console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
@@ -66,6 +73,12 @@ function requireContributor(req, res, next) {
   if (!u) return res.status(401).json(fail('Non autenticato'));
   if (u.contributor || u.role === 'mod' || u.role === 'admin') return next();
   return res.status(403).json(fail('Devi essere un contributore per questa azione. Attiva il flag "Contributore" nel tuo profilo.'));
+}
+
+function requireModOrAdmin(req, res, next) {
+  const user = parseToken(req);
+  if (user && (user.role === 'admin' || user.role === 'mod')) { req.user = user; return next(); }
+  return res.status(403).json(fail('Accesso riservato a moderatori e amministratori'));
 }
 
 // Accept admin JWT *or* X-Admin-Token header
@@ -183,6 +196,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     res.redirect(`/?auth_token=${token}${suffix}`);
   } catch (err) {
     console.error('[discord/callback]', err.message);
+    if (err.message === 'BANNED') return res.redirect('/?auth_error=banned');
     res.redirect('/?auth_error=discord_failed');
   }
 });
@@ -225,12 +239,13 @@ app.get('/auth/google/callback', async (req, res) => {
     const profile = await profileRes.json();
 
     const gamertag = profile.name || profile.email.split('@')[0];
-    const user  = await db.upsertUser({ provider: 'google', provider_id: profile.id, gamertag, avatar_url: profile.picture || '' });
+    const user  = await db.upsertUser({ provider: 'google', provider_id: profile.id, gamertag, avatar_url: profile.picture || '', email: profile.email || '' });
     const token = signToken(user);
     const suffix = user.is_new ? '&new_user=1' : '';
     res.redirect(`/?auth_token=${token}${suffix}`);
   } catch (err) {
     console.error('[google/callback]', err.message);
+    if (err.message === 'BANNED') return res.redirect('/?auth_error=banned');
     res.redirect('/?auth_error=google_failed');
   }
 });
@@ -308,7 +323,17 @@ app.patch('/api/admin/items/:type/:id/status', requireAdmin, async (req, res) =>
 
 // ---- ADMIN — USERS ---------------------------------------------
 
-app.get('/api/admin/users', requireAdmin, async (req, res) => {
+app.patch('/api/admin/items/:type/:id', requireAdmin, async (req, res) => {
+  try {
+    const data = await db.adminUpdateItem(req.params.type, req.params.id, req.body);
+    res.json(ok(data));
+  } catch (err) {
+    console.error('[adminUpdateItem]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.get('/api/admin/users', requireModOrAdmin, async (req, res) => {
   try {
     const data = await db.listUsers({
       search: req.query.search || '',
@@ -322,12 +347,40 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   }
 });
 
-app.patch('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
+app.patch('/api/admin/users/:id', requireModOrAdmin, async (req, res) => {
   try {
-    const user = await db.updateUserRole(req.params.id, req.body.role);
-    res.json(ok({ id: user.id, gamertag: user.gamertag, role: user.role }));
+    const user = await db.updateUserDetails(req.user.role, req.params.id, req.body);
+    res.json(ok(user));
   } catch (err) {
-    console.error('[updateUserRole]', err.message);
+    console.error('[updateUserDetails]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const data = await db.deleteUser(req.user?.role || 'admin', req.params.id, req.body.ban || null);
+    res.json(ok(data));
+  } catch (err) {
+    console.error('[deleteUser]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.get('/api/admin/banned', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.listBannedAccounts()));
+  } catch (err) {
+    console.error('[listBanned]', err.message);
+    res.status(500).json(fail(err.message));
+  }
+});
+
+app.delete('/api/admin/banned/:id', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.unbanAccount(req.params.id)));
+  } catch (err) {
+    console.error('[unbanAccount]', err.message);
     res.status(400).json(fail(err.message));
   }
 });
@@ -528,7 +581,8 @@ app.post('/api/gloves', requireAuth, requireContributor, async (req, res) => {
 
 // ---- AI SCREENSHOT PARSING -------------------------------------
 
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const ITEM_PROMPT = `Sei un assistente che analizza screenshot del gioco mobile Knighthood (UI in italiano).
 Estrai i dati dell'oggetto visibile nello screenshot e restituisci SOLO un oggetto JSON valido, senza testo aggiuntivo.
@@ -549,7 +603,8 @@ armor:
 heroes:
 { "itemType":"heroes", "name":"...", "rarity":"comune|raro|epico|leggendario|unico",
   "class1":"...", "class2":"...", "strong_vs":"...", "danni":null, "armatura":null, "pv":null,
-  "potere1":"...", "potere2":"...", "potere3":"..." }
+  "potere1":"nome potere 1", "potere1_desc":"descrizione effetto potere 1",
+  "potere2":"nome potere 2", "potere2_desc":"descrizione effetto potere 2" }
 
 servants:
 { "itemType":"servants", "name":"...", "rarity":"comune|raro|epico|leggendario|unico",
@@ -570,20 +625,25 @@ Regole:
 - tags nei servants: lista separata da virgola dei tipi (es. "Bestia,Magico")
 - vulnerabilities/resistances: lista separata da virgola
 - rarity in minuscolo italiano
-- slot armatura in minuscolo italiano`;
+- slot armatura in minuscolo italiano
+- per heroes ci sono sempre e solo due poteri; separa nome potere e descrizione effetto`;
 
 app.post('/api/ai/parse-item', requireAuth, requireContributor, async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json(fail('AI parsing non configurato (GEMINI_API_KEY mancante)'));
   }
-  const { image, mimeType = 'image/jpeg' } = req.body;
-  if (!image) return res.status(400).json(fail('Immagine mancante'));
+  const images = Array.isArray(req.body.images)
+    ? req.body.images
+    : (req.body.image ? [{ image: req.body.image, mimeType: req.body.mimeType || 'image/jpeg' }] : []);
+  if (!images.length) return res.status(400).json(fail('Immagine mancante'));
+  if (images.length > 5) return res.status(400).json(fail('Massimo 5 screenshot per analisi'));
 
   const VALID_MIME = ['image/jpeg','image/png','image/webp','image/gif'];
-  if (!VALID_MIME.includes(mimeType)) return res.status(400).json(fail('Formato immagine non supportato (jpeg/png/webp)'));
-
-  // Basic size check: base64 of 10MB = ~13.6M chars
-  if (image.length > 14_000_000) return res.status(400).json(fail('Immagine troppo grande (max ~10MB)'));
+  for (const img of images) {
+    img.mimeType = img.mimeType || 'image/jpeg';
+    if (!VALID_MIME.includes(img.mimeType)) return res.status(400).json(fail('Formato immagine non supportato (jpeg/png/webp)'));
+    if (!img.image || img.image.length > 8_000_000) return res.status(400).json(fail('Uno screenshot è troppo grande'));
+  }
 
   try {
     const geminiRes = await fetch(`${GEMINI_URL}?key=${process.env.GEMINI_API_KEY}`, {
@@ -591,13 +651,13 @@ app.post('/api/ai/parse-item', requireAuth, requireContributor, async (req, res)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [
-          { inlineData: { mimeType, data: image } },
+          ...images.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.image } })),
           { text: ITEM_PROMPT }
         ]}],
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0.1,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 1536,
         }
       })
     });
