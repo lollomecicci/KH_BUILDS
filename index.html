@@ -1293,6 +1293,69 @@
     .confirm-btn.bad:hover { background: rgba(229,62,62,.12);  border-color: rgba(229,62,62,.5);  color: #fc8181; }
     .confirm-btn:disabled  { opacity: .35; cursor: not-allowed; }
 
+    /* Screenshot drop zone */
+    .screenshot-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 18px;
+      position: relative;
+    }
+    .screenshot-zone:hover,
+    .screenshot-zone.drag-over {
+      border-color: var(--gold);
+      background: var(--gold-bg);
+    }
+    .screenshot-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .screenshot-zone-icon  { font-size: 2rem; line-height: 1; margin-bottom: 8px; }
+    .screenshot-zone-label { font-size: .9rem; color: var(--text2); }
+    .screenshot-zone-hint  { font-size: .75rem; color: var(--text3); margin-top: 4px; }
+
+    .screenshot-preview {
+      display: none;
+      position: relative;
+      margin-bottom: 18px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .screenshot-preview img {
+      width: 100%; max-height: 220px; object-fit: contain;
+      background: var(--bg2); display: block;
+    }
+    .screenshot-preview-actions {
+      display: flex; gap: 8px; align-items: center;
+      padding: 8px 10px; background: var(--bg3);
+    }
+    .screenshot-preview-name { flex: 1; font-size: .8rem; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .ai-parse-btn {
+      padding: 7px 16px; border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #7c5ce4, #5b4fc4);
+      border: none; color: #fff;
+      font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: .88rem;
+      cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ai-parse-btn:hover   { background: linear-gradient(135deg, #9b7ff0, #7c5ce4); }
+    .ai-parse-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .ai-result-bar {
+      display: none;
+      align-items: center; gap: 8px;
+      padding: 9px 14px; border-radius: var(--radius-sm);
+      background: rgba(56,161,105,.08); border: 1px solid rgba(56,161,105,.3);
+      margin-bottom: 14px; font-size: .85rem; color: #68d391;
+    }
+    .ai-result-bar.error {
+      background: rgba(229,62,62,.08); border-color: rgba(229,62,62,.3); color: #fc8181;
+    }
+
     /* Submit item form */
     .type-selector {
       display: flex;
@@ -1782,6 +1845,30 @@
     </div>
     <div class="modal-body">
       <form id="submit-item-form" onsubmit="submitItem(event)">
+
+        <!-- SCREENSHOT DROP ZONE -->
+        <div class="screenshot-zone" id="screenshot-zone"
+             ondragover="screenshotDragOver(event)" ondragleave="screenshotDragLeave(event)"
+             ondrop="screenshotDrop(event)">
+          <input type="file" id="screenshot-input" accept="image/jpeg,image/png,image/webp"
+                 onchange="screenshotSelected(event)" />
+          <div class="screenshot-zone-icon">📷</div>
+          <div class="screenshot-zone-label">Trascina uno screenshot o <strong>clicca per selezionare</strong></div>
+          <div class="screenshot-zone-hint">JPG / PNG / WEBP — il form viene compilato automaticamente dall'AI</div>
+        </div>
+
+        <div class="screenshot-preview" id="screenshot-preview">
+          <img id="screenshot-thumb" src="" alt="preview" />
+          <div class="screenshot-preview-actions">
+            <span class="screenshot-preview-name" id="screenshot-name"></span>
+            <button type="button" class="ai-parse-btn" id="ai-parse-btn" onclick="runAiParse()">
+              ✨ Analizza con AI
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="clearScreenshot()">✕</button>
+          </div>
+        </div>
+
+        <div class="ai-result-bar" id="ai-result-bar"></div>
 
         <div class="type-selector" id="item-type-selector">
           <button type="button" class="type-btn active" data-itype="weapons"  onclick="setItemFormType('weapons')">⚔ Arma</button>
@@ -2679,6 +2766,165 @@ function toggleMiticoFields(formType) {
   }
 }
 
+// ============================================================
+// SCREENSHOT AI PARSING
+// ============================================================
+let screenshotData = null; // { base64, mimeType }
+
+function screenshotDragOver(e) {
+  e.preventDefault();
+  document.getElementById('screenshot-zone').classList.add('drag-over');
+}
+function screenshotDragLeave() {
+  document.getElementById('screenshot-zone').classList.remove('drag-over');
+}
+function screenshotDrop(e) {
+  e.preventDefault();
+  screenshotDragLeave();
+  const file = e.dataTransfer?.files?.[0];
+  if (file) processScreenshotFile(file);
+}
+function screenshotSelected(e) {
+  const file = e.target.files?.[0];
+  if (file) processScreenshotFile(file);
+}
+
+function processScreenshotFile(file) {
+  const VALID = ['image/jpeg','image/png','image/webp'];
+  if (!VALID.includes(file.type)) { showToast('Formato non supportato (usa JPG/PNG/WEBP)', 'error'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('Immagine troppo grande (max 10MB)', 'error'); return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    // dataUrl = "data:image/jpeg;base64,XXXXX"
+    const base64  = dataUrl.split(',')[1];
+    screenshotData = { base64, mimeType: file.type };
+
+    document.getElementById('screenshot-thumb').src = dataUrl;
+    document.getElementById('screenshot-name').textContent = file.name;
+    document.getElementById('screenshot-zone').style.display    = 'none';
+    document.getElementById('screenshot-preview').style.display = '';
+
+    const bar = document.getElementById('ai-result-bar');
+    bar.style.display = 'none';
+    bar.className = 'ai-result-bar';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearScreenshot() {
+  screenshotData = null;
+  document.getElementById('screenshot-input').value = '';
+  document.getElementById('screenshot-zone').style.display    = '';
+  document.getElementById('screenshot-preview').style.display = 'none';
+  const bar = document.getElementById('ai-result-bar');
+  bar.style.display = 'none';
+}
+
+async function runAiParse() {
+  if (!screenshotData) return;
+  const btn = document.getElementById('ai-parse-btn');
+  const bar = document.getElementById('ai-result-bar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analisi in corso...';
+  bar.style.display = 'none';
+
+  try {
+    const res  = await fetch(`${API_BASE}/ai/parse-item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ image: screenshotData.base64, mimeType: screenshotData.mimeType })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    const data = json.data;
+    applyAiResult(data);
+
+    bar.className = 'ai-result-bar';
+    bar.style.display = 'flex';
+    bar.innerHTML = `✓ Rilevato: <strong>${data.name || '?'}</strong> — controlla i campi e invia`;
+  } catch (err) {
+    bar.className = 'ai-result-bar error';
+    bar.style.display = 'flex';
+    bar.innerHTML = `⚠ ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Ri-analizza';
+  }
+}
+
+function applyAiResult(data) {
+  const type = data.itemType;
+  if (!type) return;
+
+  // Switch to the correct type tab
+  setItemFormType(type);
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el || val == null) return;
+    el.value = val;
+    // Trigger change events for conditional fields
+    el.dispatchEvent(new Event('change'));
+  };
+
+  if (type === 'weapons') {
+    set('iw-name',   data.name);
+    set('iw-rarity', data.rarity);
+    set('iw-type',   data.weapon_type);
+    set('iw-danni',  data.danni);
+    set('iw-talisman', data.talisman_slots);
+    set('iw-forte1', data.forte_contro_1);
+    set('iw-forte2', data.forte_contro_2);
+    toggleMiticoFields('weapons');
+  } else if (type === 'armor') {
+    set('ia-name',     data.name);
+    set('ia-rarity',   data.rarity);
+    set('ia-slot',     data.slot);
+    set('ia-armatura', data.armatura);
+    set('ia-set',      data.armor_set);
+    set('ia-talisman', data.talisman_slots);
+    set('ia-forte',    data.forte_contro);
+    toggleMiticoFields('armor');
+  } else if (type === 'heroes') {
+    set('ih-name',     data.name);
+    set('ih-rarity',   data.rarity);
+    set('ih-class1',   data.class1);
+    set('ih-class2',   data.class2);
+    set('ih-strong',   data.strong_vs);
+    set('ih-danni',    data.danni);
+    set('ih-armatura', data.armatura);
+    set('ih-pv',       data.pv);
+    set('ih-p1',       data.potere1);
+    set('ih-p2',       data.potere2);
+    set('ih-p3',       data.potere3);
+  } else if (type === 'servants') {
+    set('is-name',     data.name);
+    set('is-rarity',   data.rarity);
+    set('is-type',     data.type);
+    set('is-tags',     data.tags);
+    set('is-danni',    data.danni);
+    set('is-armatura', data.armatura);
+    set('is-pv',       data.pv);
+    set('is-pnome',    data.potere_nome);
+    set('is-pdesc',    data.potere_desc);
+    set('is-vuln',     data.vulnerabilities);
+    set('is-res',      data.resistances);
+    set('is-glove',    data.capture_glove);
+  } else if (type === 'gloves') {
+    set('ig-name',   data.name);
+    set('ig-rarity', data.rarity);
+    set('ig-danni',  data.danni);
+    set('ig-nodi',   data.nodi_totali);
+    set('ig-desc',   data.description);
+    if (data.nodes_json?.length) {
+      set('ig-nodes', JSON.stringify(data.nodes_json, null, 2));
+    }
+  }
+}
+
 function collectItemForm() {
   const t = currentItemFormType;
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
@@ -2743,6 +2989,7 @@ async function submitItem(event) {
     showToast('📚 Elemento inviato! Attende verifica della community.', 'success');
     closeModal('submit-item-overlay');
     document.getElementById('submit-item-form').reset();
+    clearScreenshot();
 
     if (currentSection === 'database' && dbState.type === currentItemFormType) {
       document.getElementById('db-status-filter').value = 'pending';

@@ -526,6 +526,104 @@ app.post('/api/gloves', requireAuth, requireContributor, async (req, res) => {
   }
 });
 
+// ---- AI SCREENSHOT PARSING -------------------------------------
+
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+
+const ITEM_PROMPT = `Sei un assistente che analizza screenshot del gioco mobile Knighthood (UI in italiano).
+Estrai i dati dell'oggetto visibile nello screenshot e restituisci SOLO un oggetto JSON valido, senza testo aggiuntivo.
+
+Determina il tipo di oggetto tra: weapons, armor, heroes, servants, gloves
+
+Schema JSON in base al tipo:
+
+weapons:
+{ "itemType":"weapons", "name":"...", "rarity":"comune|raro|epico|leggendario|unico|mitico",
+  "weapon_type":"spada|ascia|martello", "danni":null, "forte_contro_1":"...", "forte_contro_2":"...", "talisman_slots":null }
+
+armor:
+{ "itemType":"armor", "name":"...", "rarity":"comune|raro|epico|leggendario|unico|mitico",
+  "slot":"elmo|spalle|busto|braccia|guanti|gambe", "armatura":null,
+  "forte_contro":"...", "armor_set":"pesante|magico|leggero|a distanza", "talisman_slots":null }
+
+heroes:
+{ "itemType":"heroes", "name":"...", "rarity":"comune|raro|epico|leggendario|unico",
+  "class1":"...", "class2":"...", "strong_vs":"...", "danni":null, "armatura":null, "pv":null,
+  "potere1":"...", "potere2":"...", "potere3":"..." }
+
+servants:
+{ "itemType":"servants", "name":"...", "rarity":"comune|raro|epico|leggendario|unico",
+  "type":"...", "tags":"...", "danni":null, "armatura":null, "pv":null,
+  "potere_nome":"...", "potere_desc":"...",
+  "vulnerabilities":"...", "resistances":"...", "capture_glove":"..." }
+
+gloves:
+{ "itemType":"gloves", "name":"...", "rarity":"comune|raro|epico|leggendario|unico",
+  "danni":null, "nodi_totali":null, "description":"...",
+  "nodes_json":[ {"nome":"...","desc":"...","costo":null} ] }
+
+Regole:
+- Usa null per campi non visibili nello screenshot
+- forte_contro_1/2 e forte_contro esistono SOLO se rarità è mitico
+- armor_set esiste SOLO se rarità NON è mitico
+- nodes_json: elenca solo i nodi upgrade visibili nello screenshot
+- tags nei servants: lista separata da virgola dei tipi (es. "Bestia,Magico")
+- vulnerabilities/resistances: lista separata da virgola
+- rarity in minuscolo italiano
+- slot armatura in minuscolo italiano`;
+
+app.post('/api/ai/parse-item', requireAuth, requireContributor, async (req, res) => {
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json(fail('AI parsing non configurato (GEMINI_API_KEY mancante)'));
+  }
+  const { image, mimeType = 'image/jpeg' } = req.body;
+  if (!image) return res.status(400).json(fail('Immagine mancante'));
+
+  const VALID_MIME = ['image/jpeg','image/png','image/webp','image/gif'];
+  if (!VALID_MIME.includes(mimeType)) return res.status(400).json(fail('Formato immagine non supportato (jpeg/png/webp)'));
+
+  // Basic size check: base64 of 10MB = ~13.6M chars
+  if (image.length > 14_000_000) return res.status(400).json(fail('Immagine troppo grande (max ~10MB)'));
+
+  try {
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inlineData: { mimeType, data: image } },
+          { text: ITEM_PROMPT }
+        ]}],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+        }
+      })
+    });
+
+    const geminiData = await geminiRes.json();
+    if (!geminiRes.ok) {
+      const msg = geminiData.error?.message || `Gemini error ${geminiRes.status}`;
+      throw new Error(msg);
+    }
+
+    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Nessuna risposta dal modello AI');
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { throw new Error('Il modello ha restituito un formato non valido'); }
+
+    if (!parsed.itemType) throw new Error('Tipo oggetto non riconosciuto nello screenshot');
+
+    res.json(ok(parsed));
+  } catch (err) {
+    console.error('[parseItem]', err.message);
+    res.status(500).json(fail(err.message));
+  }
+});
+
 // ---- HEALTH ----------------------------------------------------
 
 app.get('/health', (_req, res) => {
