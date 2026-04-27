@@ -1046,7 +1046,110 @@
     .gamertag-edit input { flex: 1; }
 
     /* ============================================================
-       SECTION NAV (Build / Database)
+       ROLE BADGES
+    ============================================================ */
+    .role-badge {
+      display: inline-block;
+      font-size: .68rem; font-weight: 700; font-family: 'Cinzel', serif;
+      padding: 2px 9px; border-radius: 100px; flex-shrink: 0;
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .role-admin { background: var(--gold-bg); color: var(--gold-h); border: 1px solid var(--gold-d); }
+    .role-mod   { background: rgba(124,92,228,.15); color: #c3b1e1; border: 1px solid rgba(124,92,228,.4); }
+    .role-user  { background: rgba(158,158,158,.1); color: #9e9e9e; border: 1px solid rgba(158,158,158,.3); }
+
+    .contributor-badge {
+      font-size: .68rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 100px;
+      background: rgba(56,161,105,.1); color: #68d391; border: 1px solid rgba(56,161,105,.3);
+    }
+
+    /* ============================================================
+       ADMIN SECTION
+    ============================================================ */
+    .admin-header { padding: 22px 0 10px; }
+    .admin-title  { font-family: 'Cinzel', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 4px; }
+    .admin-sub    { font-size: .85rem; color: var(--text2); }
+
+    .admin-search-bar {
+      display: flex; gap: 10px; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .users-table-wrap { overflow-x: auto; margin-top: 16px; }
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    .users-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: .72rem;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      letter-spacing: .06em;
+    }
+    .users-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(37,37,64,.6);
+      vertical-align: middle;
+    }
+    .users-table tr:hover td { background: rgba(255,255,255,.02); }
+
+    .user-avatar-sm {
+      width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+      vertical-align: middle; margin-right: 8px;
+    }
+    .user-avatar-placeholder-sm {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--bg3); font-size: .9rem;
+      vertical-align: middle; margin-right: 8px;
+    }
+
+    .role-select {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); font-family: 'Rajdhani', sans-serif;
+      font-size: .85rem; padding: 4px 8px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: var(--transition);
+    }
+    .role-select:hover { border-color: var(--border-h); }
+
+    .admin-pagination { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 16px 0; }
+
+    /* ============================================================
+       ONBOARDING MODAL
+    ============================================================ */
+    .onboarding-feature {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px; border-radius: var(--radius);
+      background: var(--bg3); border: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+    .onboarding-feature-icon { font-size: 1.4rem; line-height: 1; }
+    .onboarding-feature-text { flex: 1; }
+    .onboarding-feature-text strong { display: block; color: var(--text); font-size: .95rem; margin-bottom: 2px; }
+    .onboarding-feature-text span { font-size: .82rem; color: var(--text2); }
+
+    .contributor-checkbox-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: var(--radius);
+      background: rgba(56,161,105,.06); border: 1px solid rgba(56,161,105,.2);
+      cursor: pointer; transition: var(--transition);
+      margin-top: 16px;
+    }
+    .contributor-checkbox-row:hover { border-color: rgba(56,161,105,.5); background: rgba(56,161,105,.1); }
+    .contributor-checkbox-row input[type=checkbox] { width: 18px; height: 18px; accent-color: #38a169; cursor: pointer; }
+    .contributor-checkbox-label { flex: 1; cursor: pointer; }
+    .contributor-checkbox-label strong { display: block; color: var(--text); }
+    .contributor-checkbox-label span   { font-size: .82rem; color: var(--text2); }
+
+    /* ============================================================
+       SECTION NAV (Build / Database / Admin)
     ============================================================ */
     .section-nav {
       display: flex;
@@ -1260,6 +1363,7 @@
     <div class="section-nav" id="section-nav">
       <button class="section-tab active" data-section="builds" onclick="setSection('builds')">⚔ Build</button>
       <button class="section-tab" data-section="database" onclick="setSection('database')">📚 Database</button>
+      <button class="section-tab" data-section="admin" id="admin-nav-tab" style="display:none" onclick="setSection('admin')">👑 Admin</button>
     </div>
 
     <div class="header-ornament" aria-hidden="true">◆</div>
@@ -1388,6 +1492,44 @@
   </main>
 
 </div><!-- /database-section -->
+
+<!-- ============================================================
+     SECTION: ADMIN
+============================================================ -->
+<div id="admin-section" style="display:none">
+  <main class="main">
+    <div class="container">
+      <div class="admin-header">
+        <div class="admin-title">👑 Pannello Amministrazione</div>
+        <div class="admin-sub">Gestisci utenti, ruoli e permessi</div>
+      </div>
+      <div class="admin-search-bar">
+        <div class="search-wrap" style="flex:1;max-width:320px">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="admin-search"
+                 placeholder="Cerca per gamertag o provider..." autocomplete="off" />
+        </div>
+        <span id="admin-user-count" style="color:var(--text2);font-size:.85rem"></span>
+      </div>
+      <div class="users-table-wrap">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Utente</th>
+              <th>Provider</th>
+              <th>Ruolo</th>
+              <th>Contributore</th>
+              <th>Iscritto</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+      <div class="admin-pagination" id="admin-pagination"></div>
+    </div>
+  </main>
+</div><!-- /admin-section -->
 
 <!-- FAB -->
 <button class="fab" id="main-fab" onclick="onFabClick()" aria-label="Nuova build">
@@ -1529,6 +1671,58 @@
       <button class="modal-close" onclick="closeDetailModal()" aria-label="Chiudi">✕</button>
     </div>
     <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — ONBOARDING (primo accesso)
+============================================================ -->
+<div class="modal-overlay" id="onboarding-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>⚔ Benvenuto su KH Builds!</h2>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:16px">
+        Hai effettuato il primo accesso. Scegli il tuo gamertag e decidi se vuoi contribuire al database della community.
+      </p>
+
+      <div class="onboarding-feature">
+        <span class="onboarding-feature-icon">⚔</span>
+        <div class="onboarding-feature-text">
+          <strong>Salva e vota le build</strong>
+          <span>Disponibile per tutti gli utenti registrati.</span>
+        </div>
+      </div>
+      <div class="onboarding-feature">
+        <span class="onboarding-feature-icon">📚</span>
+        <div class="onboarding-feature-text">
+          <strong>Contribuisci al database del gioco</strong>
+          <span>Aggiungi armi, armature, eroi, servitori e guanti. Richiede l'attivazione qui sotto.</span>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:18px">
+        <label>Gamertag <span class="req">*</span></label>
+        <input type="text" id="ob-gamertag" class="form-input"
+               placeholder="Il tuo nome pubblico" maxlength="32" />
+        <span class="field-hint">2–32 caratteri, visibile pubblicamente</span>
+      </div>
+
+      <label class="contributor-checkbox-row" for="ob-contributor">
+        <input type="checkbox" id="ob-contributor" />
+        <div class="contributor-checkbox-label">
+          <strong>Voglio contribuire al database del gioco</strong>
+          <span>Potrai aggiungere elementi e verificare quelli inviati da altri. Puoi cambiarlo in qualsiasi momento dal profilo.</span>
+        </div>
+      </label>
+
+      <div class="form-actions" style="margin-top:20px">
+        <button type="button" class="btn btn-gold" style="width:100%" onclick="saveOnboarding()">
+          ⚔ Completa registrazione
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1882,32 +2076,46 @@ const Auth = {
   _user: null,
 
   init() {
-    // Leggi token da URL (dopo redirect OAuth) o da localStorage
-    const urlParams = new URLSearchParams(location.search);
-    const urlToken  = urlParams.get('auth_token');
-    const urlError  = urlParams.get('auth_error');
+    const urlParams  = new URLSearchParams(location.search);
+    const urlToken   = urlParams.get('auth_token');
+    const urlError   = urlParams.get('auth_error');
+    const isNewUser  = urlParams.get('new_user') === '1';
 
-    if (urlToken) {
-      localStorage.setItem('kh_jwt', urlToken);
+    if (urlToken || urlError || isNewUser) {
       history.replaceState({}, '', location.pathname);
     }
-    if (urlError) {
-      history.replaceState({}, '', location.pathname);
-      showToast('Accesso fallito. Riprova.', 'error');
-    }
+
+    if (urlToken) localStorage.setItem('kh_jwt', urlToken);
+    if (urlError) showToast('Accesso fallito. Riprova.', 'error');
 
     const token = localStorage.getItem('kh_jwt');
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.exp * 1000 > Date.now()) {
-          this._user = { userId: payload.userId, gamertag: payload.gamertag, avatar: payload.avatar };
+          this._user = {
+            userId:      payload.userId,
+            gamertag:    payload.gamertag,
+            avatar:      payload.avatar      || '',
+            role:        payload.role        || 'user',
+            contributor: payload.contributor  ? 1 : 0,
+          };
         } else {
           localStorage.removeItem('kh_jwt');
         }
       } catch { localStorage.removeItem('kh_jwt'); }
     }
+
     this.renderWidget();
+
+    // Show admin tab if admin
+    const adminTab = document.getElementById('admin-nav-tab');
+    if (adminTab) adminTab.style.display = (this._user?.role === 'admin') ? '' : 'none';
+
+    // New user → onboarding
+    if (isNewUser && this._user) {
+      setTimeout(() => openOnboarding(), 300);
+    }
   },
 
   get user() { return this._user; },
@@ -1923,6 +2131,11 @@ const Auth = {
     localStorage.removeItem('kh_jwt');
     this._user = null;
     this.renderWidget();
+    // Hide admin tab
+    const adminTab = document.getElementById('admin-nav-tab');
+    if (adminTab) adminTab.style.display = 'none';
+    // Switch to builds if on admin
+    if (currentSection === 'admin') setSection('builds');
     showToast('Disconnesso.', 'info');
   },
 
@@ -1944,6 +2157,11 @@ const Auth = {
   }
 };
 
+function canContribute() {
+  const u = Auth.user;
+  return Boolean(u && (u.contributor || u.role === 'mod' || u.role === 'admin'));
+}
+
 function loginWith(provider) {
   window.location.href = `${IS_LOCAL ? 'http://localhost:3000' : ''}/auth/${provider}`;
 }
@@ -1953,16 +2171,22 @@ function openProfileModal() {
   const u    = Auth.user;
   if (!u) return;
 
-  const providerIcon = { discord: '🎮', google: '🔵' };
+  const roleLabelMap = { admin: '👑 Admin', mod: '🛡 Moderatore', user: '👤 Utente' };
+  const contribLabel = u.contributor
+    ? `<span class="contributor-badge">✓ Contributore</span>`
+    : `<span style="font-size:.78rem;color:var(--text3)">Non contributore</span>`;
 
   body.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
       ${u.avatar
         ? `<img class="user-avatar" src="${u.avatar}" style="width:48px;height:48px" alt="" />`
         : `<span class="user-avatar-placeholder" style="width:48px;height:48px;font-size:1.5rem">👤</span>`}
-      <div>
+      <div style="display:flex;flex-direction:column;gap:4px">
         <div style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--text)">${u.gamertag}</div>
-        <div style="font-size:.8rem;color:var(--text3)">ID: ${u.userId.slice(0,8)}…</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="role-badge role-${u.role}">${roleLabelMap[u.role]||u.role}</span>
+          ${contribLabel}
+        </div>
       </div>
     </div>
     <div class="profile-actions">
@@ -1974,6 +2198,13 @@ function openProfileModal() {
         </div>
         <span class="field-hint">2–32 caratteri, visibile pubblicamente</span>
       </div>
+      <label class="contributor-checkbox-row" for="profile-contributor" style="margin-top:0">
+        <input type="checkbox" id="profile-contributor" ${u.contributor ? 'checked' : ''} onchange="toggleContributor(this.checked)" />
+        <div class="contributor-checkbox-label">
+          <strong>Contributore database</strong>
+          <span>Attiva per poter aggiungere e verificare elementi nel database del gioco.</span>
+        </div>
+      </label>
       <button class="btn btn-outline" onclick="Auth.logout();closeModal('profile-overlay')">
         Disconnetti
       </button>
@@ -2002,6 +2233,189 @@ async function saveGamertag() {
   }
 }
 
+async function toggleContributor(value) {
+  try {
+    const res  = await fetch(`${API_BASE}/me/contributor`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ contributor: value ? 1 : 0 })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    localStorage.setItem('kh_jwt', json.data.token);
+    Auth._user.contributor = value ? 1 : 0;
+    Auth.renderWidget();
+    const msg = value ? '✓ Ora sei un contributore!' : 'Flag contributore rimosso.';
+    showToast(msg, 'success');
+    // Update FAB visibility if in database section
+    if (currentSection === 'database') {
+      document.getElementById('main-fab').style.display = canContribute() ? '' : 'none';
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============================================================
+// ONBOARDING
+// ============================================================
+function openOnboarding() {
+  const input = document.getElementById('ob-gamertag');
+  if (input && Auth.user) input.value = Auth.user.gamertag || '';
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  Anim.modalOpen(overlay);
+}
+
+async function saveOnboarding() {
+  const gamertag   = document.getElementById('ob-gamertag').value.trim();
+  const contributor = document.getElementById('ob-contributor').checked ? 1 : 0;
+
+  if (!gamertag || gamertag.length < 2) { showToast('Gamertag troppo corto (min 2 caratteri)', 'error'); return; }
+
+  try {
+    // Save gamertag
+    const gtRes  = await fetch(`${API_BASE}/me/gamertag`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ gamertag })
+    });
+    const gtJson = await gtRes.json();
+    if (!gtJson.ok) throw new Error(gtJson.error);
+    localStorage.setItem('kh_jwt', gtJson.data.token);
+    Auth._user.gamertag    = gamertag;
+    Auth._user.contributor = contributor;
+
+    // Save contributor flag
+    const cRes  = await fetch(`${API_BASE}/me/contributor`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ contributor })
+    });
+    const cJson = await cRes.json();
+    if (!cJson.ok) throw new Error(cJson.error);
+    localStorage.setItem('kh_jwt', cJson.data.token);
+    Auth._user.contributor = contributor;
+
+    Auth.renderWidget();
+
+    const overlay = document.getElementById('onboarding-overlay');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+
+    showToast(contributor
+      ? '⚔ Registrazione completata! Sei un contributore.'
+      : '⚔ Registrazione completata!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+const adminState = {
+  users: [], total: 0, page: 1, pages: 1,
+  loading: false, loaded: false, searchTimer: null
+};
+
+async function loadAdminUsers(page = 1) {
+  if (adminState.loading) return;
+  adminState.loading = true;
+  const tbody = document.getElementById('users-tbody');
+  if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2)">Caricamento...</td></tr>`;
+
+  try {
+    const search = document.getElementById('admin-search')?.value.trim() || '';
+    const res  = await fetch(`${API_BASE}/admin/users?search=${encodeURIComponent(search)}&page=${page}`, {
+      headers: Auth.authHeader()
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    adminState.users  = json.data.users;
+    adminState.total  = json.data.total;
+    adminState.page   = json.data.page;
+    adminState.pages  = json.data.pages;
+    adminState.loaded = true;
+
+    const countEl = document.getElementById('admin-user-count');
+    if (countEl) countEl.textContent = `${json.data.total} utenti`;
+
+    if (tbody) tbody.innerHTML = json.data.users.map(renderUserRow).join('');
+    renderAdminPagination();
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--error)">${err.message}</td></tr>`;
+  } finally {
+    adminState.loading = false;
+  }
+}
+
+function renderUserRow(u) {
+  const avatar = u.avatar_url
+    ? `<img class="user-avatar-sm" src="${u.avatar_url}" alt="" />`
+    : `<span class="user-avatar-placeholder-sm">👤</span>`;
+  const providerIcon = { discord: '🎮', google: '🔵' };
+  const roleLabelMap = { admin: '👑 Admin', mod: '🛡 Mod', user: '👤 Utente' };
+  const contrib = u.contributor
+    ? `<span class="contributor-badge">✓</span>`
+    : `<span style="color:var(--text3);font-size:.8rem">—</span>`;
+  const date = u.created_at ? new Date(u.created_at).toLocaleDateString('it-IT') : '—';
+
+  return `
+    <tr data-uid="${u.id}">
+      <td>
+        ${avatar}
+        <span style="font-weight:600">${u.gamertag}</span>
+      </td>
+      <td style="color:var(--text2)">${providerIcon[u.provider]||''} ${u.provider}</td>
+      <td>
+        <select class="role-select" onchange="setUserRole('${u.id}', this.value)" ${u.id === Auth.user?.userId ? 'disabled title="Non puoi modificare il tuo ruolo"' : ''}>
+          <option value="user"  ${u.role==='user' ?'selected':''}>👤 Utente</option>
+          <option value="mod"   ${u.role==='mod'  ?'selected':''}>🛡 Moderatore</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
+        </select>
+      </td>
+      <td>${contrib}</td>
+      <td style="color:var(--text2);font-size:.82rem">${date}</td>
+      <td>
+        <span class="role-badge role-${u.role}">${roleLabelMap[u.role]||u.role}</span>
+      </td>
+    </tr>`;
+}
+
+async function setUserRole(userId, role) {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ role })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    showToast(`Ruolo aggiornato: ${role}`, 'success');
+    // Reload to refresh badges
+    setTimeout(() => loadAdminUsers(adminState.page), 400);
+  } catch (err) {
+    showToast(err.message, 'error');
+    loadAdminUsers(adminState.page);
+  }
+}
+
+function renderAdminPagination() {
+  const el = document.getElementById('admin-pagination');
+  if (!el) return;
+  const { page, pages } = adminState;
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="loadAdminUsers(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= pages; i++) {
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="loadAdminUsers(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="loadAdminUsers(${page+1})" ${page===pages?'disabled':''}>›</button>`;
+  el.innerHTML = html;
+}
+
 // ============================================================
 // SECTION NAV
 // ============================================================
@@ -2009,8 +2423,9 @@ let currentSection = 'builds';
 
 function setSection(section) {
   currentSection = section;
-  document.getElementById('builds-section').style.display  = section === 'builds'   ? '' : 'none';
-  document.getElementById('database-section').style.display = section === 'database' ? '' : 'none';
+  document.getElementById('builds-section').style.display   = section === 'builds'   ? '' : 'none';
+  document.getElementById('database-section').style.display  = section === 'database' ? '' : 'none';
+  document.getElementById('admin-section').style.display     = section === 'admin'    ? '' : 'none';
 
   document.querySelectorAll('.section-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.section === section)
@@ -2018,10 +2433,15 @@ function setSection(section) {
 
   const fab = document.getElementById('main-fab');
   if (section === 'database') {
-    fab.textContent = '＋ Contribuisci';
-    if (section === 'database' && !dbState.loaded) loadDatabase();
+    fab.style.display = canContribute() ? '' : 'none';
+    fab.textContent   = '＋ Contribuisci';
+    if (!dbState.loaded) loadDatabase();
+  } else if (section === 'admin') {
+    fab.style.display = 'none';
+    if (!adminState.loaded) loadAdminUsers();
   } else {
-    fab.textContent = '＋ Nuova Build';
+    fab.style.display = '';
+    fab.textContent   = '＋ Nuova Build';
   }
 }
 
@@ -2195,11 +2615,16 @@ function renderItemCard(item, type) {
 
 async function confirmItemFromUI(type, id, action) {
   if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  if (!canContribute()) {
+    showToast('Attiva il flag "Contributore" nel tuo profilo per poter verificare elementi.', 'error');
+    openProfileModal();
+    return;
+  }
   try {
     const res  = await fetch(`${API_BASE}/items/${type}/${id}/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
-      body: JSON.stringify({ voterKey: getVoterKey(), action })
+      body: JSON.stringify({ action })
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error);
@@ -2222,6 +2647,11 @@ let currentItemFormType = 'weapons';
 
 function openSubmitItemModal() {
   if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  if (!canContribute()) {
+    showToast('Attiva il flag "Contributore" nel tuo profilo per poter contribuire al database.', 'error');
+    openProfileModal();
+    return;
+  }
   openModal('submit-item-overlay');
 }
 
@@ -2895,6 +3325,11 @@ document.getElementById('f-desc').addEventListener('input', e => {
 document.getElementById('db-search').addEventListener('input', e => {
   clearTimeout(dbState.searchTimer);
   dbState.searchTimer = setTimeout(loadDatabase, 380);
+});
+
+document.getElementById('admin-search').addEventListener('input', () => {
+  clearTimeout(adminState.searchTimer);
+  adminState.searchTimer = setTimeout(() => loadAdminUsers(1), 380);
 });
 
 // ============================================================

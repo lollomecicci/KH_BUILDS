@@ -24,7 +24,62 @@ app.use((req, _res, next) => {
 const ok   = data => ({ ok: true,  data });
 const fail = msg  => ({ ok: false, error: msg });
 
-// ---- ROUTES ------------------------------------------------
+// ---- JWT --------------------------------------------------------
+
+const JWT_SECRET = () => process.env.JWT_SECRET || 'dev_secret_change_me';
+
+function signToken(user) {
+  return jwt.sign(
+    {
+      userId:      user.id,
+      gamertag:    user.gamertag,
+      avatar:      user.avatar_url || '',
+      role:        user.role        || 'user',
+      contributor: user.contributor  ? 1 : 0,
+    },
+    JWT_SECRET(),
+    { expiresIn: '30d' }
+  );
+}
+
+function parseToken(req) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return null;
+  try { return jwt.verify(auth.slice(7), JWT_SECRET()); }
+  catch { return null; }
+}
+
+const APP_URL = () => process.env.APP_URL || 'http://localhost:3000';
+
+// ---- AUTH MIDDLEWARE --------------------------------------------
+
+function requireAuth(req, res, next) {
+  const user = parseToken(req);
+  if (!user) return res.status(401).json(fail('Non autenticato'));
+  req.user = user;
+  next();
+}
+
+// Contributor = user with contributor flag OR mod OR admin
+function requireContributor(req, res, next) {
+  const u = req.user;
+  if (!u) return res.status(401).json(fail('Non autenticato'));
+  if (u.contributor || u.role === 'mod' || u.role === 'admin') return next();
+  return res.status(403).json(fail('Devi essere un contributore per questa azione. Attiva il flag "Contributore" nel tuo profilo.'));
+}
+
+// Accept admin JWT *or* X-Admin-Token header
+function requireAdmin(req, res, next) {
+  const headerToken = req.headers['x-admin-token'];
+  if (process.env.ADMIN_TOKEN && headerToken === process.env.ADMIN_TOKEN) return next();
+
+  const user = parseToken(req);
+  if (user && user.role === 'admin') { req.user = user; return next(); }
+
+  return res.status(403).json(fail('Accesso riservato agli amministratori'));
+}
+
+// ---- BUILDS -----------------------------------------------------
 
 app.get('/api/builds', async (req, res) => {
   try {
@@ -82,26 +137,7 @@ app.get('/api/stats', async (_req, res) => {
   }
 });
 
-// ---- AUTH HELPERS ------------------------------------------
-
-function signToken(user) {
-  return jwt.sign(
-    { userId: user.id, gamertag: user.gamertag, avatar: user.avatar_url },
-    process.env.JWT_SECRET || 'dev_secret_change_me',
-    { expiresIn: '30d' }
-  );
-}
-
-function parseToken(req) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return null;
-  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev_secret_change_me'); }
-  catch { return null; }
-}
-
-const APP_URL = () => process.env.APP_URL || 'http://localhost:3000';
-
-// ---- AUTH — DISCORD ----------------------------------------
+// ---- AUTH — DISCORD ---------------------------------------------
 
 app.get('/auth/discord', (req, res) => {
   if (!process.env.DISCORD_CLIENT_ID) return res.status(503).send('Discord OAuth non configurato');
@@ -132,7 +168,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) throw new Error('Token Discord non ricevuto');
 
-    const profileRes  = await fetch('https://discord.com/api/users/@me', {
+    const profileRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const profile = await profileRes.json();
@@ -143,14 +179,15 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     const user  = await db.upsertUser({ provider: 'discord', provider_id: profile.id, gamertag: profile.username, avatar_url: avatar });
     const token = signToken(user);
-    res.redirect(`/?auth_token=${token}`);
+    const suffix = user.is_new ? '&new_user=1' : '';
+    res.redirect(`/?auth_token=${token}${suffix}`);
   } catch (err) {
     console.error('[discord/callback]', err.message);
     res.redirect('/?auth_error=discord_failed');
   }
 });
 
-// ---- AUTH — GOOGLE -----------------------------------------
+// ---- AUTH — GOOGLE ----------------------------------------------
 
 app.get('/auth/google', (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).send('Google OAuth non configurato');
@@ -190,41 +227,64 @@ app.get('/auth/google/callback', async (req, res) => {
     const gamertag = profile.name || profile.email.split('@')[0];
     const user  = await db.upsertUser({ provider: 'google', provider_id: profile.id, gamertag, avatar_url: profile.picture || '' });
     const token = signToken(user);
-    res.redirect(`/?auth_token=${token}`);
+    const suffix = user.is_new ? '&new_user=1' : '';
+    res.redirect(`/?auth_token=${token}${suffix}`);
   } catch (err) {
     console.error('[google/callback]', err.message);
     res.redirect('/?auth_error=google_failed');
   }
 });
 
-// ---- AUTH — ME ---------------------------------------------
+// ---- AUTH — ME --------------------------------------------------
 
-app.get('/api/me', (req, res) => {
-  const user = parseToken(req);
-  if (!user) return res.status(401).json(fail('Non autenticato'));
-  res.json(ok({ userId: user.userId, gamertag: user.gamertag, avatar: user.avatar }));
+app.get('/api/me', requireAuth, async (req, res) => {
+  try {
+    // Always return fresh data from DB so role/contributor changes are instant
+    const user = await db.getUserById(req.user.userId);
+    if (!user) return res.status(404).json(fail('Utente non trovato'));
+    res.json(ok({
+      userId:      user.id,
+      gamertag:    user.gamertag,
+      avatar:      user.avatar_url,
+      role:        user.role,
+      contributor: user.contributor,
+    }));
+  } catch (err) {
+    res.status(500).json(fail(err.message));
+  }
 });
 
-app.patch('/api/me/gamertag', async (req, res) => {
-  const user = parseToken(req);
-  if (!user) return res.status(401).json(fail('Non autenticato'));
+app.patch('/api/me/gamertag', requireAuth, async (req, res) => {
   try {
-    const data  = await db.updateGamertag(user.userId, req.body.gamertag);
-    const token = signToken({ id: user.userId, gamertag: data.gamertag, avatar_url: user.avatar || '' });
-    res.json(ok({ gamertag: data.gamertag, token }));
+    const user  = await db.updateGamertag(req.user.userId, req.body.gamertag);
+    const token = signToken(user);
+    res.json(ok({ gamertag: user.gamertag, token }));
   } catch (err) {
     res.status(400).json(fail(err.message));
   }
 });
 
-// ---- COMMUNITY CONFIRM/FLAG --------------------------------
-// POST /api/items/:type/:id/confirm  { voterKey, action: "confirm"|"flag" }
-app.post('/api/items/:type/:id/confirm', async (req, res) => {
+app.patch('/api/me/contributor', requireAuth, async (req, res) => {
   try {
+    const value = req.body.contributor ? 1 : 0;
+    const user  = await db.setContributor(req.user.userId, value);
+    const token = signToken(user);
+    res.json(ok({ contributor: user.contributor, token }));
+  } catch (err) {
+    res.status(400).json(fail(err.message));
+  }
+});
+
+// ---- COMMUNITY CONFIRM/FLAG ------------------------------------
+// Requires authentication + contributor/mod/admin
+
+app.post('/api/items/:type/:id/confirm', requireAuth, requireContributor, async (req, res) => {
+  try {
+    // Use userId as voterKey — one vote per account, cannot spoof
     const data = await db.confirmItem(
       req.params.type,
       req.params.id,
-      req.body.voterKey,
+      req.user.userId,
       req.body.action || 'confirm'
     );
     res.json(ok(data));
@@ -234,18 +294,9 @@ app.post('/api/items/:type/:id/confirm', async (req, res) => {
   }
 });
 
-// ---- ADMIN -------------------------------------------------
-// PATCH /api/admin/items/:type/:id/status  { status }
-// Richiede header X-Admin-Token
-const adminAuth = (req, res, next) => {
-  const token = req.headers['x-admin-token'];
-  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN) {
-    return res.status(403).json(fail('Non autorizzato'));
-  }
-  next();
-};
+// ---- ADMIN — ITEMS ---------------------------------------------
 
-app.patch('/api/admin/items/:type/:id/status', adminAuth, async (req, res) => {
+app.patch('/api/admin/items/:type/:id/status', requireAdmin, async (req, res) => {
   try {
     const data = await db.adminSetStatus(req.params.type, req.params.id, req.body.status);
     res.json(ok(data));
@@ -255,7 +306,33 @@ app.patch('/api/admin/items/:type/:id/status', adminAuth, async (req, res) => {
   }
 });
 
-// ---- WEAPONS -----------------------------------------------
+// ---- ADMIN — USERS ---------------------------------------------
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const data = await db.listUsers({
+      search: req.query.search || '',
+      page:   parseInt(req.query.page) || 1,
+      limit:  Math.min(parseInt(req.query.limit) || 50, 100),
+    });
+    res.json(ok(data));
+  } catch (err) {
+    console.error('[listUsers]', err.message);
+    res.status(500).json(fail(err.message));
+  }
+});
+
+app.patch('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
+  try {
+    const user = await db.updateUserRole(req.params.id, req.body.role);
+    res.json(ok({ id: user.id, gamertag: user.gamertag, role: user.role }));
+  } catch (err) {
+    console.error('[updateUserRole]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+// ---- WEAPONS ---------------------------------------------------
 
 app.get('/api/weapons', async (req, res) => {
   try {
@@ -283,9 +360,10 @@ app.get('/api/weapons/:id', async (req, res) => {
   }
 });
 
-app.post('/api/weapons', async (req, res) => {
+app.post('/api/weapons', requireAuth, requireContributor, async (req, res) => {
   try {
-    const data = await db.createWeapon(req.body);
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createWeapon(body);
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createWeapon]', err.message);
@@ -293,7 +371,7 @@ app.post('/api/weapons', async (req, res) => {
   }
 });
 
-// ---- ARMOR -------------------------------------------------
+// ---- ARMOR -----------------------------------------------------
 
 app.get('/api/armor', async (req, res) => {
   try {
@@ -322,9 +400,10 @@ app.get('/api/armor/:id', async (req, res) => {
   }
 });
 
-app.post('/api/armor', async (req, res) => {
+app.post('/api/armor', requireAuth, requireContributor, async (req, res) => {
   try {
-    const data = await db.createArmorPiece(req.body);
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createArmorPiece(body);
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createArmorPiece]', err.message);
@@ -332,7 +411,7 @@ app.post('/api/armor', async (req, res) => {
   }
 });
 
-// ---- HEROES ------------------------------------------------
+// ---- HEROES ----------------------------------------------------
 
 app.get('/api/heroes', async (req, res) => {
   try {
@@ -359,9 +438,10 @@ app.get('/api/heroes/:id', async (req, res) => {
   }
 });
 
-app.post('/api/heroes', async (req, res) => {
+app.post('/api/heroes', requireAuth, requireContributor, async (req, res) => {
   try {
-    const data = await db.createHero(req.body);
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createHero(body);
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createHero]', err.message);
@@ -369,7 +449,7 @@ app.post('/api/heroes', async (req, res) => {
   }
 });
 
-// ---- SERVANTS ----------------------------------------------
+// ---- SERVANTS --------------------------------------------------
 
 app.get('/api/servants', async (req, res) => {
   try {
@@ -397,9 +477,10 @@ app.get('/api/servants/:id', async (req, res) => {
   }
 });
 
-app.post('/api/servants', async (req, res) => {
+app.post('/api/servants', requireAuth, requireContributor, async (req, res) => {
   try {
-    const data = await db.createServant(req.body);
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createServant(body);
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createServant]', err.message);
@@ -407,7 +488,7 @@ app.post('/api/servants', async (req, res) => {
   }
 });
 
-// ---- GLOVES ------------------------------------------------
+// ---- GLOVES ----------------------------------------------------
 
 app.get('/api/gloves', async (req, res) => {
   try {
@@ -434,9 +515,10 @@ app.get('/api/gloves/:id', async (req, res) => {
   }
 });
 
-app.post('/api/gloves', async (req, res) => {
+app.post('/api/gloves', requireAuth, requireContributor, async (req, res) => {
   try {
-    const data = await db.createGlove(req.body);
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createGlove(body);
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createGlove]', err.message);
@@ -444,13 +526,13 @@ app.post('/api/gloves', async (req, res) => {
   }
 });
 
-// ---- HEALTH ------------------------------------------------
+// ---- HEALTH ----------------------------------------------------
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ---- START -------------------------------------------------
+// ---- START -----------------------------------------------------
 
 async function start() {
   await db.initSchema();

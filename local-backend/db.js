@@ -62,6 +62,7 @@ async function initSchema() {
         status        TEXT NOT NULL DEFAULT 'pending',
         submitted_by  TEXT NOT NULL DEFAULT '',
         confirmations INTEGER NOT NULL DEFAULT 0,
+        flags         INTEGER NOT NULL DEFAULT 0,
         timestamp     TEXT NOT NULL
       )`,
       args: []
@@ -84,6 +85,7 @@ async function initSchema() {
         status          TEXT NOT NULL DEFAULT 'pending',
         submitted_by    TEXT NOT NULL DEFAULT '',
         confirmations   INTEGER NOT NULL DEFAULT 0,
+        flags           INTEGER NOT NULL DEFAULT 0,
         timestamp       TEXT NOT NULL
       )`,
       args: []
@@ -102,6 +104,7 @@ async function initSchema() {
         status        TEXT NOT NULL DEFAULT 'pending',
         submitted_by  TEXT NOT NULL DEFAULT '',
         confirmations INTEGER NOT NULL DEFAULT 0,
+        flags         INTEGER NOT NULL DEFAULT 0,
         timestamp     TEXT NOT NULL
       )`,
       args: []
@@ -119,6 +122,7 @@ async function initSchema() {
         status         TEXT NOT NULL DEFAULT 'pending',
         submitted_by   TEXT NOT NULL DEFAULT '',
         confirmations  INTEGER NOT NULL DEFAULT 0,
+        flags          INTEGER NOT NULL DEFAULT 0,
         timestamp      TEXT NOT NULL
       )`,
       args: []
@@ -137,6 +141,7 @@ async function initSchema() {
         status         TEXT NOT NULL DEFAULT 'pending',
         submitted_by   TEXT NOT NULL DEFAULT '',
         confirmations  INTEGER NOT NULL DEFAULT 0,
+        flags          INTEGER NOT NULL DEFAULT 0,
         timestamp      TEXT NOT NULL
       )`,
       args: []
@@ -150,18 +155,19 @@ async function initSchema() {
 
   await db.execute({
     sql: `CREATE TABLE IF NOT EXISTS users (
-      id          TEXT PRIMARY KEY,
-      gamertag    TEXT NOT NULL,
-      provider    TEXT NOT NULL,
-      provider_id TEXT NOT NULL,
-      avatar_url  TEXT NOT NULL DEFAULT '',
-      created_at  TEXT NOT NULL,
+      id           TEXT PRIMARY KEY,
+      gamertag     TEXT NOT NULL,
+      provider     TEXT NOT NULL,
+      provider_id  TEXT NOT NULL,
+      avatar_url   TEXT NOT NULL DEFAULT '',
+      role         TEXT NOT NULL DEFAULT 'user',
+      contributor  INTEGER NOT NULL DEFAULT 0,
+      created_at   TEXT NOT NULL,
       UNIQUE(provider, provider_id)
     )`,
     args: []
   });
 
-  // Tabella conferme community per items
   await db.execute({
     sql: `CREATE TABLE IF NOT EXISTS item_confirmations (
       item_id   TEXT NOT NULL,
@@ -174,20 +180,29 @@ async function initSchema() {
     args: []
   });
 
-  // Migrazioni su DB esistente: aggiungi colonne se mancanti
+  // Safe migrations on existing DB
   const migrations = [
-    `ALTER TABLE builds ADD COLUMN spalle       TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE builds ADD COLUMN braccia      TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE builds ADD COLUMN servant1     TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE builds ADD COLUMN servant2     TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE servants ADD COLUMN potere_nome    TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE servants ADD COLUMN potere_desc    TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE servants ADD COLUMN capture_glove  TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN spalle      TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN braccia     TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN servant1    TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN servant2    TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN potere_nome   TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN potere_desc   TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE servants ADD COLUMN capture_glove TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE users    ADD COLUMN role          TEXT NOT NULL DEFAULT 'user'`,
+    `ALTER TABLE users    ADD COLUMN contributor   INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE heroes   ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE servants ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE gloves   ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE weapons  ADD COLUMN flags         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE armor_pieces ADD COLUMN flags     INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const sql of migrations) {
-    try { await db.execute({ sql, args: [] }); } catch (_) { /* colonna già presente */ }
+    try { await db.execute({ sql, args: [] }); } catch (_) { /* column already exists */ }
   }
 }
+
+// ─── Builds ──────────────────────────────────────────────────────────────────
 
 async function listBuilds({ mode = 'all', sort = 'votes', search = '', page = 1, limit = 12 }) {
   const conditions = ["status != 'hidden'"];
@@ -269,10 +284,10 @@ async function createBuild(d) {
 }
 
 async function voteBuild(id, type, voterKey) {
-  if (!id)                                   throw new Error('ID build mancante');
-  if (!type)                                 throw new Error('Tipo voto mancante');
-  if (!voterKey)                             throw new Error('Identificatore votante mancante');
-  if (!['up','down'].includes(type))         throw new Error('Tipo voto non valido (up/down)');
+  if (!id)                           throw new Error('ID build mancante');
+  if (!type)                         throw new Error('Tipo voto mancante');
+  if (!voterKey)                     throw new Error('Identificatore votante mancante');
+  if (!['up','down'].includes(type)) throw new Error('Tipo voto non valido (up/down)');
 
   const dupRes = await db.execute({
     sql:  'SELECT vote_type FROM votes WHERE build_id = ? AND voter_key = ?',
@@ -348,75 +363,30 @@ function rowToObj(row) {
   };
 }
 
-function heroToObj(row) {
-  const s = k => String(row[k] || '');
-  const n = k => (row[k] != null ? Number(row[k]) : null);
-  return {
-    id:            s('id'),
-    name:          s('name'),
-    rarity:        s('rarity'),
-    class1:        s('class1'),
-    class2:        s('class2'),
-    strong_vs:     s('strong_vs'),
-    danni:         n('danni'),
-    armatura:      n('armatura'),
-    pv:            n('pv'),
-    potere1:       s('potere1'),
-    potere2:       s('potere2'),
-    potere3:       s('potere3'),
-    status:        s('status'),
-    submitted_by:  s('submitted_by'),
-    confirmations: Number(row.confirmations || 0),
-    timestamp:     s('timestamp'),
-  };
-}
-
-function servantToObj(row) {
-  const s = k => String(row[k] || '');
-  const n = k => (row[k] != null ? Number(row[k]) : null);
-  return {
-    id:              s('id'),
-    name:            s('name'),
-    rarity:          s('rarity'),
-    type:            s('type'),
-    tags:            s('tags'),
-    danni:           n('danni'),
-    armatura:        n('armatura'),
-    pv:              n('pv'),
-    potere_nome:     s('potere_nome'),
-    potere_desc:     s('potere_desc'),
-    vulnerabilities: s('vulnerabilities'),
-    resistances:     s('resistances'),
-    capture_glove:   s('capture_glove'),
-    status:          s('status'),
-    submitted_by:    s('submitted_by'),
-    confirmations:   Number(row.confirmations || 0),
-    timestamp:       s('timestamp'),
-  };
-}
-
 // ─── Community confirmation ───────────────────────────────────────────────────
 
-const ITEM_TABLES = { weapon: 'weapons', armor: 'armor_pieces', hero: 'heroes', servant: 'servants', glove: 'gloves' };
+// Accept both plural (from URL path) and singular (legacy) keys
+const ITEM_TABLES = {
+  weapon: 'weapons',       weapons: 'weapons',
+  armor:  'armor_pieces',  armor_pieces: 'armor_pieces',
+  hero:   'heroes',        heroes: 'heroes',
+  servant:'servants',      servants: 'servants',
+  glove:  'gloves',        gloves: 'gloves',
+};
 const CONFIRM_THRESHOLD = 3;
 const FLAG_THRESHOLD    = 3;
 
 async function confirmItem(itemType, itemId, voterKey, action) {
   const table = ITEM_TABLES[itemType];
-  if (!table)                             throw new Error('Tipo item non valido');
-  if (!itemId)                            throw new Error('ID item mancante');
-  if (!voterKey)                          throw new Error('voter_key mancante');
-  if (!['confirm','flag'].includes(action)) throw new Error('Azione non valida (confirm/flag)');
+  if (!table)                                throw new Error('Tipo item non valido');
+  if (!itemId)                               throw new Error('ID item mancante');
+  if (!voterKey)                             throw new Error('voter_key mancante');
+  if (!['confirm','flag'].includes(action))  throw new Error('Azione non valida (confirm/flag)');
 
-  // Controlla se item esiste
   const itemRes = await db.execute({ sql: `SELECT id, status FROM ${table} WHERE id = ?`, args: [itemId] });
   if (!itemRes.rows.length) throw new Error('Item non trovato');
   const currentStatus = String(itemRes.rows[0].status);
-  if (currentStatus === 'verified' && action === 'confirm') {
-    return { alreadyVerified: true, message: 'Item già verificato' };
-  }
 
-  // Dedup: un voter_key per item
   const dupRes = await db.execute({
     sql:  'SELECT action FROM item_confirmations WHERE item_id = ? AND item_type = ? AND voter_key = ?',
     args: [itemId, itemType, voterKey]
@@ -430,19 +400,21 @@ async function confirmItem(itemType, itemId, voterKey, action) {
     args: [itemId, itemType, voterKey, action, new Date().toISOString()]
   });
 
-  // Conta conferme e flag
-  const countRes = await db.execute({
-    sql:  'SELECT action, COUNT(*) as cnt FROM item_confirmations WHERE item_id = ? AND item_type = ? GROUP BY action',
-    args: [itemId, itemType]
-  });
-  let confirms = 0, flags = 0;
-  for (const row of countRes.rows) {
-    if (row.action === 'confirm') confirms = Number(row.cnt);
-    if (row.action === 'flag')    flags    = Number(row.cnt);
+  // Update denormalised counters on item row
+  if (action === 'confirm') {
+    await db.execute({ sql: `UPDATE ${table} SET confirmations = confirmations + 1 WHERE id = ?`, args: [itemId] });
+  } else {
+    await db.execute({ sql: `UPDATE ${table} SET flags = flags + 1 WHERE id = ?`, args: [itemId] });
   }
 
+  const countRes = await db.execute({
+    sql: `SELECT confirmations, flags FROM ${table} WHERE id = ?`, args: [itemId]
+  });
+  const confirms = Number(countRes.rows[0].confirmations || 0);
+  const flags    = Number(countRes.rows[0].flags    || 0);
+
   let newStatus = currentStatus;
-  if (flags >= FLAG_THRESHOLD)    newStatus = 'flagged';
+  if (flags >= FLAG_THRESHOLD)         newStatus = 'flagged';
   else if (confirms >= CONFIRM_THRESHOLD) newStatus = 'verified';
 
   if (newStatus !== currentStatus) {
@@ -463,6 +435,12 @@ async function adminSetStatus(itemType, itemId, newStatus) {
 
 // ─── Weapons ─────────────────────────────────────────────────────────────────
 
+const VALID_RARITIES      = ['comune','raro','epico','leggendario','unico'];
+const VALID_RARITIES_ITEM = ['comune','raro','epico','leggendario','unico','mitico'];
+const VALID_ARMOR_SLOTS   = ['elmo','spalle','busto','braccia','guanti','gambe'];
+const VALID_ARMOR_SETS    = ['pesante','magico','leggero','a distanza'];
+const VALID_WEAPON_TYPES  = ['spada','ascia','martello'];
+
 function weaponToObj(row) {
   const s = k => String(row[k] || '');
   return {
@@ -477,6 +455,7 @@ function weaponToObj(row) {
     status:         s('status'),
     submitted_by:   s('submitted_by'),
     confirmations:  Number(row.confirmations || 0),
+    flags:          Number(row.flags || 0),
     timestamp:      s('timestamp'),
   };
 }
@@ -507,13 +486,13 @@ async function createWeapon(d) {
   const name        = (d.name        || '').trim();
   const rarity      = (d.rarity      || '').trim().toLowerCase();
   const weapon_type = (d.weapon_type || '').trim();
-  if (!name)                                   throw new Error('Nome arma obbligatorio');
-  if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+  if (!name)                                    throw new Error('Nome arma obbligatorio');
+  if (!VALID_RARITIES_ITEM.includes(rarity))  throw new Error('Rarità non valida');
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO weapons (id,name,rarity,weapon_type,danni,forte_contro_1,forte_contro_2,talisman_slots,status,submitted_by,confirmations,timestamp)
-          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    sql: `INSERT INTO weapons (id,name,rarity,weapon_type,danni,forte_contro_1,forte_contro_2,talisman_slots,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, rarity, weapon_type,
       d.danni != null ? Number(d.danni) : null,
@@ -529,12 +508,29 @@ async function createWeapon(d) {
 
 // ─── Heroes ──────────────────────────────────────────────────────────────────
 
-const VALID_RARITIES      = ['comune','raro','epico','leggendario','unico'];
-const VALID_RARITIES_ITEM = ['comune','raro','epico','leggendario','unico','mitico'];
-const VALID_ARMOR_SLOTS   = ['elmo','spalle','busto','braccia','gambe'];
-const VALID_ARMOR_SETS    = ['pesante','magico','leggero','a distanza'];
-const VALID_WEAPON_TYPES  = ['spada','ascia','martello'];
-const VALID_HERO_STAT = { status: ['pending','verified','flagged'] };
+function heroToObj(row) {
+  const s = k => String(row[k] || '');
+  const n = k => (row[k] != null ? Number(row[k]) : null);
+  return {
+    id:            s('id'),
+    name:          s('name'),
+    rarity:        s('rarity'),
+    class1:        s('class1'),
+    class2:        s('class2'),
+    strong_vs:     s('strong_vs'),
+    danni:         n('danni'),
+    armatura:      n('armatura'),
+    pv:            n('pv'),
+    potere1:       s('potere1'),
+    potere2:       s('potere2'),
+    potere3:       s('potere3'),
+    status:        s('status'),
+    submitted_by:  s('submitted_by'),
+    confirmations: Number(row.confirmations || 0),
+    flags:         Number(row.flags || 0),
+    timestamp:     s('timestamp'),
+  };
+}
 
 async function listHeroes({ rarity, status = 'verified', search = '' } = {}) {
   const conds = [];
@@ -560,13 +556,13 @@ async function getHero(id) {
 async function createHero(d) {
   const name   = (d.name   || '').trim();
   const rarity = (d.rarity || '').trim().toLowerCase();
-  if (!name)                           throw new Error('Nome eroe obbligatorio');
+  if (!name)                            throw new Error('Nome eroe obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO heroes (id,name,rarity,class1,class2,strong_vs,danni,armatura,pv,potere1,potere2,potere3,status,submitted_by,confirmations,timestamp)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    sql: `INSERT INTO heroes (id,name,rarity,class1,class2,strong_vs,danni,armatura,pv,potere1,potere2,potere3,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, rarity,
       (d.class1    ||'').trim(), (d.class2    ||'').trim(),
@@ -583,6 +579,31 @@ async function createHero(d) {
 }
 
 // ─── Servants ────────────────────────────────────────────────────────────────
+
+function servantToObj(row) {
+  const s = k => String(row[k] || '');
+  const n = k => (row[k] != null ? Number(row[k]) : null);
+  return {
+    id:              s('id'),
+    name:            s('name'),
+    rarity:          s('rarity'),
+    type:            s('type'),
+    tags:            s('tags'),
+    danni:           n('danni'),
+    armatura:        n('armatura'),
+    pv:              n('pv'),
+    potere_nome:     s('potere_nome'),
+    potere_desc:     s('potere_desc'),
+    vulnerabilities: s('vulnerabilities'),
+    resistances:     s('resistances'),
+    capture_glove:   s('capture_glove'),
+    status:          s('status'),
+    submitted_by:    s('submitted_by'),
+    confirmations:   Number(row.confirmations || 0),
+    flags:           Number(row.flags || 0),
+    timestamp:       s('timestamp'),
+  };
+}
 
 async function listServants({ rarity, type, status = 'verified', search = '' } = {}) {
   const conds = [];
@@ -609,13 +630,13 @@ async function getServant(id) {
 async function createServant(d) {
   const name   = (d.name   || '').trim();
   const rarity = (d.rarity || '').trim().toLowerCase();
-  if (!name)                           throw new Error('Nome servitore obbligatorio');
+  if (!name)                            throw new Error('Nome servitore obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO servants (id,name,rarity,type,tags,danni,armatura,pv,potere_nome,potere_desc,vulnerabilities,resistances,capture_glove,status,submitted_by,confirmations,timestamp)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    sql: `INSERT INTO servants (id,name,rarity,type,tags,danni,armatura,pv,potere_nome,potere_desc,vulnerabilities,resistances,capture_glove,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, rarity,
       (d.type  ||'').trim(),
@@ -652,6 +673,7 @@ function gloveToObj(row) {
     status:        s('status'),
     submitted_by:  s('submitted_by'),
     confirmations: Number(row.confirmations || 0),
+    flags:         Number(row.flags || 0),
     timestamp:     s('timestamp'),
   };
 }
@@ -683,15 +705,15 @@ async function createGlove(d) {
   if (!name)                            throw new Error('Nome guanto obbligatorio');
   if (!VALID_RARITIES.includes(rarity)) throw new Error('Rarità non valida');
 
-  // nodes: array di { nome, desc, costo }
-  let nodes = d.nodes || [];
+  let nodes = d.nodes_json || d.nodes || [];
+  if (typeof nodes === 'string') { try { nodes = JSON.parse(nodes); } catch { nodes = []; } }
   if (!Array.isArray(nodes)) throw new Error('nodes deve essere un array');
   const nodes_json = JSON.stringify(nodes);
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO gloves (id,name,rarity,danni,description,nodes_json,nodi_totali,status,submitted_by,confirmations,timestamp)
-          VALUES (?,?,?,?,?,?,?,'pending',?,0,?)`,
+    sql: `INSERT INTO gloves (id,name,rarity,danni,description,nodes_json,nodi_totali,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, rarity,
       d.danni != null ? Number(d.danni) : null,
@@ -721,6 +743,7 @@ function armorToObj(row) {
     status:         s('status'),
     submitted_by:   s('submitted_by'),
     confirmations:  Number(row.confirmations || 0),
+    flags:          Number(row.flags || 0),
     timestamp:      s('timestamp'),
   };
 }
@@ -752,18 +775,18 @@ async function createArmorPiece(d) {
   const name   = (d.name   || '').trim();
   const slot   = (d.slot   || '').trim().toLowerCase();
   const rarity = (d.rarity || '').trim().toLowerCase();
-  if (!name)                               throw new Error('Nome armatura obbligatorio');
-  if (!VALID_ARMOR_SLOTS.includes(slot))   throw new Error('Slot non valido (elmo/spalle/busto/braccia/gambe)');
-  if (!VALID_RARITIES_ITEM.includes(rarity)) throw new Error('Rarità non valida');
+  if (!name)                                  throw new Error('Nome armatura obbligatorio');
+  if (!VALID_ARMOR_SLOTS.includes(slot))      throw new Error('Slot non valido');
+  if (!VALID_RARITIES_ITEM.includes(rarity))  throw new Error('Rarità non valida');
 
   const armor_set    = (d.armor_set    || '').trim().toLowerCase();
   const forte_contro = (d.forte_contro || '').trim();
-  if (armor_set && !VALID_ARMOR_SETS.includes(armor_set)) throw new Error('Set armatura non valido (pesante/magico/leggero/a distanza)');
+  if (armor_set && !VALID_ARMOR_SETS.includes(armor_set)) throw new Error('Set armatura non valido');
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql: `INSERT INTO armor_pieces (id,name,slot,rarity,armatura,forte_contro,armor_set,talisman_slots,status,submitted_by,confirmations,timestamp)
-          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,?)`,
+    sql: `INSERT INTO armor_pieces (id,name,slot,rarity,armatura,forte_contro,armor_set,talisman_slots,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
     args: [
       id, name, slot, rarity,
       d.armatura != null ? Number(d.armatura) : null,
@@ -778,6 +801,19 @@ async function createArmorPiece(d) {
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
+function userToObj(row) {
+  return {
+    id:          String(row.id),
+    gamertag:    String(row.gamertag),
+    provider:    String(row.provider),
+    provider_id: String(row.provider_id || ''),
+    avatar_url:  String(row.avatar_url  || ''),
+    role:        String(row.role        || 'user'),
+    contributor: Number(row.contributor || 0),
+    created_at:  String(row.created_at  || ''),
+  };
+}
+
 async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
   const existing = await db.execute({
     sql:  'SELECT * FROM users WHERE provider = ? AND provider_id = ?',
@@ -790,15 +826,20 @@ async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
       sql:  'UPDATE users SET avatar_url = ? WHERE id = ?',
       args: [avatar_url, u.id]
     });
-    return { id: String(u.id), gamertag: String(u.gamertag), provider, avatar_url };
+    return { ...userToObj(u), avatar_url, is_new: false };
   }
 
   const id = crypto.randomUUID();
   await db.execute({
-    sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, created_at) VALUES (?,?,?,?,?,?)',
-    args: [id, gamertag, provider, provider_id, avatar_url, new Date().toISOString()]
+    sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, role, contributor, created_at) VALUES (?,?,?,?,?,?,?,?)',
+    args: [id, gamertag, provider, provider_id, avatar_url, 'user', 0, new Date().toISOString()]
   });
-  return { id, gamertag, provider, avatar_url };
+  return { id, gamertag, provider, provider_id, avatar_url, role: 'user', contributor: 0, is_new: true };
+}
+
+async function getUserById(userId) {
+  const res = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
+  return res.rows.length ? userToObj(res.rows[0]) : null;
 }
 
 async function updateGamertag(userId, gamertag) {
@@ -807,7 +848,45 @@ async function updateGamertag(userId, gamertag) {
   if (gamertag.length > 32)             throw new Error('Gamertag troppo lungo (max 32 caratteri)');
   const res = await db.execute({ sql: 'UPDATE users SET gamertag = ? WHERE id = ?', args: [gamertag, userId] });
   if (!res.rowsAffected) throw new Error('Utente non trovato');
-  return { gamertag };
+  const u = await getUserById(userId);
+  return u;
+}
+
+async function setContributor(userId, value) {
+  const val = value ? 1 : 0;
+  const res = await db.execute({ sql: 'UPDATE users SET contributor = ? WHERE id = ?', args: [val, userId] });
+  if (!res.rowsAffected) throw new Error('Utente non trovato');
+  const u = await getUserById(userId);
+  return u;
+}
+
+const VALID_ROLES = ['user', 'mod', 'admin'];
+
+async function updateUserRole(targetId, role) {
+  if (!VALID_ROLES.includes(role)) throw new Error('Ruolo non valido (user/mod/admin)');
+  const res = await db.execute({ sql: 'UPDATE users SET role = ? WHERE id = ?', args: [role, targetId] });
+  if (!res.rowsAffected) throw new Error('Utente non trovato');
+  return await getUserById(targetId);
+}
+
+async function listUsers({ search = '', page = 1, limit = 50 } = {}) {
+  const conds = [];
+  const args  = [];
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(gamertag LIKE ? OR provider LIKE ?)');
+    args.push(q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const countRes = await db.execute({ sql: `SELECT COUNT(*) as cnt FROM users ${where}`, args });
+  const total    = Number(countRes.rows[0].cnt);
+  const pages    = Math.max(1, Math.ceil(total / limit));
+  const p        = Math.min(page, pages);
+  const res = await db.execute({
+    sql:  `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    args: [...args, limit, (p - 1) * limit]
+  });
+  return { users: res.rows.map(userToObj), total, page: p, pages };
 }
 
 module.exports = {
@@ -819,5 +898,5 @@ module.exports = {
   listServants, getServant, createServant,
   listGloves, getGlove, createGlove,
   confirmItem, adminSetStatus,
-  upsertUser, updateGamertag,
+  upsertUser, getUserById, updateGamertag, setContributor, updateUserRole, listUsers,
 };
