@@ -829,12 +829,16 @@ async function upsertUser({ provider, provider_id, gamertag, avatar_url }) {
     return { ...userToObj(u), avatar_url, is_new: false };
   }
 
+  // First user ever registered becomes admin automatically
+  const adminCheck = await db.execute("SELECT COUNT(*) as cnt FROM users WHERE role = 'admin'");
+  const role = Number(adminCheck.rows[0].cnt) === 0 ? 'admin' : 'user';
+
   const id = crypto.randomUUID();
   await db.execute({
     sql:  'INSERT INTO users (id, gamertag, provider, provider_id, avatar_url, role, contributor, created_at) VALUES (?,?,?,?,?,?,?,?)',
-    args: [id, gamertag, provider, provider_id, avatar_url, 'user', 0, new Date().toISOString()]
+    args: [id, gamertag, provider, provider_id, avatar_url, role, role === 'admin' ? 1 : 0, new Date().toISOString()]
   });
-  return { id, gamertag, provider, provider_id, avatar_url, role: 'user', contributor: 0, is_new: true };
+  return { id, gamertag, provider, provider_id, avatar_url, role, contributor: role === 'admin' ? 1 : 0, is_new: true };
 }
 
 async function getUserById(userId) {
