@@ -1046,6 +1046,171 @@
     .gamertag-edit input { flex: 1; }
 
     /* ============================================================
+       SECTION NAV (Build / Database)
+    ============================================================ */
+    .section-nav {
+      display: flex;
+      gap: 3px;
+      background: rgba(10,10,20,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+    .section-tab {
+      padding: 6px 18px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .section-tab:hover { color: var(--text); }
+    .section-tab.active { color: var(--gold); background: var(--bg3); box-shadow: 0 1px 6px rgba(0,0,0,.5), inset 0 0 0 1px var(--gold-d); }
+
+    /* ============================================================
+       DATABASE SECTION
+    ============================================================ */
+    .db-filter-bar {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,8,15,.6);
+    }
+    .db-filter-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .db-type-tabs {
+      display: flex;
+      gap: 3px;
+      background: rgba(10,10,20,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      flex-wrap: wrap;
+    }
+    .db-tab {
+      padding: 5px 13px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .db-tab:hover { color: var(--text); }
+    .db-tab.active { color: var(--gold); background: var(--bg3); box-shadow: inset 0 0 0 1px var(--gold-d); }
+
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .item-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform .2s ease, border-color .2s ease;
+    }
+    .item-card:hover { transform: translateY(-2px); border-color: var(--border-h); }
+
+    .item-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .item-name { font-family: 'Cinzel', serif; font-size: .95rem; font-weight: 700; color: var(--text); flex: 1; min-width: 0; }
+
+    /* Rarity badges */
+    .rarity-badge {
+      font-size: .68rem; font-weight: 700; font-family: 'Cinzel', serif;
+      padding: 2px 9px; border-radius: 100px; flex-shrink: 0;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .rarity-comune      { background: rgba(158,158,158,.12); color: #9e9e9e; border: 1px solid rgba(158,158,158,.3); }
+    .rarity-raro        { background: rgba(33,150,243,.12);  color: #64b5f6; border: 1px solid rgba(33,150,243,.3); }
+    .rarity-epico       { background: rgba(156,39,176,.15);  color: #ce93d8; border: 1px solid rgba(156,39,176,.3); }
+    .rarity-leggendario { background: rgba(255,152,0,.12);   color: #ffb74d; border: 1px solid rgba(255,152,0,.3); }
+    .rarity-unico       { background: var(--gold-bg);        color: var(--gold-h); border: 1px solid var(--gold-d); }
+    .rarity-mitico      { background: rgba(0,188,212,.1);    color: #4dd0e1; border: 1px solid rgba(0,188,212,.3); }
+
+    /* Status badges */
+    .status-badge {
+      font-size: .68rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 100px; flex-shrink: 0;
+    }
+    .status-pending  { background: rgba(255,193,7,.1);  color: #ffd54f; border: 1px solid rgba(255,193,7,.3); }
+    .status-verified { background: rgba(56,161,105,.1); color: #68d391;  border: 1px solid rgba(56,161,105,.3); }
+    .status-flagged  { background: rgba(229,62,62,.1);  color: #fc8181;  border: 1px solid rgba(229,62,62,.3); }
+
+    .item-stats {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: .85rem;
+    }
+    .item-stat { color: var(--text2); }
+    .item-stat strong { color: var(--text); font-weight: 700; }
+
+    .item-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .item-tag {
+      font-size: .72rem; padding: 2px 8px; border-radius: 100px;
+      background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+    }
+
+    .item-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .item-submitter { font-size: .76rem; color: var(--text3); }
+
+    .confirm-row { display: flex; gap: 6px; }
+    .confirm-btn {
+      padding: 4px 11px; border-radius: var(--radius-sm); font-size: .8rem;
+      font-family: 'Rajdhani', sans-serif; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--border); background: rgba(255,255,255,.04);
+      color: var(--text2); transition: var(--transition);
+    }
+    .confirm-btn.ok:hover  { background: rgba(56,161,105,.15); border-color: rgba(56,161,105,.5); color: #68d391; }
+    .confirm-btn.bad:hover { background: rgba(229,62,62,.12);  border-color: rgba(229,62,62,.5);  color: #fc8181; }
+    .confirm-btn:disabled  { opacity: .35; cursor: not-allowed; }
+
+    /* Submit item form */
+    .type-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .type-btn {
+      padding: 7px 16px; border-radius: var(--radius-sm);
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text2); font-family: 'Rajdhani', sans-serif;
+      font-size: .9rem; font-weight: 700; cursor: pointer;
+      transition: var(--transition);
+    }
+    .type-btn:hover { border-color: var(--border-h); color: var(--text); }
+    .type-btn.active { background: var(--gold-bg); border-color: var(--gold-d); color: var(--gold); }
+
+    .item-form-section { display: none; }
+    .item-form-section.visible { display: block; }
+
+    /* ============================================================
        RESPONSIVE
     ============================================================ */
     @media (max-width: 640px) {
@@ -1092,15 +1257,27 @@
       </div>
     </div>
 
+    <div class="section-nav" id="section-nav">
+      <button class="section-tab active" data-section="builds" onclick="setSection('builds')">⚔ Build</button>
+      <button class="section-tab" data-section="database" onclick="setSection('database')">📚 Database</button>
+    </div>
+
     <div class="header-ornament" aria-hidden="true">◆</div>
 
     <div class="auth-area">
-      <button class="btn btn-gold" onclick="openCreateModal()">＋ Nuova Build</button>
+      <div id="fab-inline" style="display:none">
+        <button class="btn btn-gold" id="fab-inline-btn">＋</button>
+      </div>
       <div id="auth-widget"></div>
     </div>
 
   </div>
 </header>
+
+<!-- ============================================================
+     SECTION: BUILDS
+============================================================ -->
+<div id="builds-section">
 
 <!-- ============================================================
      STATS BAR
@@ -1174,8 +1351,46 @@
   </div>
 </main>
 
+</div><!-- /builds-section -->
+
+<!-- ============================================================
+     SECTION: DATABASE
+============================================================ -->
+<div id="database-section" style="display:none">
+
+  <div class="db-filter-bar">
+    <div class="container db-filter-inner">
+      <div class="db-type-tabs" id="db-type-tabs">
+        <button class="db-tab active" data-type="weapons"  onclick="setDbType('weapons')">⚔ Armi</button>
+        <button class="db-tab" data-type="armor"    onclick="setDbType('armor')">🛡 Armature</button>
+        <button class="db-tab" data-type="heroes"   onclick="setDbType('heroes')">👤 Eroi</button>
+        <button class="db-tab" data-type="servants" onclick="setDbType('servants')">🐾 Servitori</button>
+        <button class="db-tab" data-type="gloves"   onclick="setDbType('gloves')">🧤 Guanti</button>
+      </div>
+      <div class="search-wrap" style="flex:1;max-width:280px">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="db-search"
+               placeholder="Cerca nel database..." autocomplete="off" />
+      </div>
+      <select class="filter-select" id="db-status-filter" onchange="loadDatabase()">
+        <option value="verified">✦ Verificati</option>
+        <option value="pending">⏳ In attesa</option>
+        <option value="all">Tutti</option>
+      </select>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="container">
+      <div id="db-state-box"></div>
+      <div class="item-grid" id="item-grid"></div>
+    </div>
+  </main>
+
+</div><!-- /database-section -->
+
 <!-- FAB -->
-<button class="fab" onclick="openCreateModal()" aria-label="Nuova build">
+<button class="fab" id="main-fab" onclick="onFabClick()" aria-label="Nuova build">
   ＋ Nuova Build
 </button>
 
@@ -1358,6 +1573,188 @@
     </div>
     <div class="modal-body">
       <div id="profile-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — AGGIUNGI ELEMENTO DB
+============================================================ -->
+<div class="modal-overlay" id="submit-item-overlay" onclick="overlayClick(event,'submit-item-overlay')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2>📚 Aggiungi al Database</h2>
+      <button class="modal-close" onclick="closeModal('submit-item-overlay')" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="submit-item-form" onsubmit="submitItem(event)">
+
+        <div class="type-selector" id="item-type-selector">
+          <button type="button" class="type-btn active" data-itype="weapons"  onclick="setItemFormType('weapons')">⚔ Arma</button>
+          <button type="button" class="type-btn" data-itype="armor"    onclick="setItemFormType('armor')">🛡 Armatura</button>
+          <button type="button" class="type-btn" data-itype="heroes"   onclick="setItemFormType('heroes')">👤 Eroe</button>
+          <button type="button" class="type-btn" data-itype="servants" onclick="setItemFormType('servants')">🐾 Servitore</button>
+          <button type="button" class="type-btn" data-itype="gloves"   onclick="setItemFormType('gloves')">🧤 Guanto</button>
+        </div>
+
+        <!-- ARMI -->
+        <div class="item-form-section visible" id="iform-weapons">
+          <div class="form-grid">
+            <div class="form-group full"><label>Nome <span class="req">*</span></label>
+              <input type="text" id="iw-name" class="form-input" placeholder="Es: Spaccamiti" maxlength="100" /></div>
+            <div class="form-group"><label>Rarità <span class="req">*</span></label>
+              <select id="iw-rarity" class="form-select" onchange="toggleMiticoFields('weapons')">
+                <option value="">Seleziona...</option>
+                <option value="comune">Comune</option><option value="raro">Raro</option>
+                <option value="epico">Epico</option><option value="leggendario">Leggendario</option>
+                <option value="unico">Unico</option><option value="mitico">Mitico</option>
+              </select></div>
+            <div class="form-group"><label>Tipo</label>
+              <select id="iw-type" class="form-select">
+                <option value="">Seleziona...</option>
+                <option value="spada">Spada</option><option value="ascia">Ascia</option><option value="martello">Martello</option>
+              </select></div>
+            <div class="form-group"><label>Danni</label>
+              <input type="number" id="iw-danni" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Slot Talismano</label>
+              <input type="number" id="iw-talisman" class="form-input" placeholder="0" min="0" max="5" /></div>
+            <div class="form-group mitico-field" style="display:none"><label>Forte Contro 1</label>
+              <input type="text" id="iw-forte1" class="form-input" placeholder="Es: Non-morti" maxlength="60" /></div>
+            <div class="form-group mitico-field" style="display:none"><label>Forte Contro 2</label>
+              <input type="text" id="iw-forte2" class="form-input" placeholder="Es: Demoni" maxlength="60" /></div>
+          </div>
+        </div>
+
+        <!-- ARMATURE -->
+        <div class="item-form-section" id="iform-armor">
+          <div class="form-grid">
+            <div class="form-group full"><label>Nome <span class="req">*</span></label>
+              <input type="text" id="ia-name" class="form-input" placeholder="Es: Spallacci del Guerriero" maxlength="100" /></div>
+            <div class="form-group"><label>Rarità <span class="req">*</span></label>
+              <select id="ia-rarity" class="form-select" onchange="toggleMiticoFields('armor')">
+                <option value="">Seleziona...</option>
+                <option value="comune">Comune</option><option value="raro">Raro</option>
+                <option value="epico">Epico</option><option value="leggendario">Leggendario</option>
+                <option value="unico">Unico</option><option value="mitico">Mitico</option>
+              </select></div>
+            <div class="form-group"><label>Slot</label>
+              <select id="ia-slot" class="form-select">
+                <option value="">Seleziona...</option>
+                <option value="elmo">Elmo</option><option value="spalle">Spalle</option>
+                <option value="busto">Busto</option><option value="braccia">Braccia</option>
+                <option value="guanti">Guanti</option><option value="gambe">Gambe</option>
+              </select></div>
+            <div class="form-group armor-set-field"><label>Set Armatura</label>
+              <select id="ia-set" class="form-select">
+                <option value="">Nessuno</option>
+                <option value="pesante">Pesante</option><option value="magico">Magico</option>
+                <option value="leggero">Leggero</option><option value="a distanza">A Distanza</option>
+              </select></div>
+            <div class="form-group"><label>Armatura</label>
+              <input type="number" id="ia-armatura" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Slot Talismano</label>
+              <input type="number" id="ia-talisman" class="form-input" placeholder="0" min="0" max="5" /></div>
+            <div class="form-group mitico-field" style="display:none"><label>Forte Contro</label>
+              <input type="text" id="ia-forte" class="form-input" placeholder="Es: Non-morti" maxlength="60" /></div>
+          </div>
+        </div>
+
+        <!-- EROI -->
+        <div class="item-form-section" id="iform-heroes">
+          <div class="form-grid">
+            <div class="form-group full"><label>Nome <span class="req">*</span></label>
+              <input type="text" id="ih-name" class="form-input" placeholder="Nome eroe" maxlength="100" /></div>
+            <div class="form-group"><label>Rarità</label>
+              <select id="ih-rarity" class="form-select">
+                <option value="">Seleziona...</option>
+                <option value="comune">Comune</option><option value="raro">Raro</option>
+                <option value="epico">Epico</option><option value="leggendario">Leggendario</option><option value="unico">Unico</option>
+              </select></div>
+            <div class="form-group"><label>Classe 1</label>
+              <input type="text" id="ih-class1" class="form-input" placeholder="Es: Guerriero" maxlength="50" /></div>
+            <div class="form-group"><label>Classe 2</label>
+              <input type="text" id="ih-class2" class="form-input" placeholder="Es: Mago" maxlength="50" /></div>
+            <div class="form-group"><label>Forte Contro</label>
+              <input type="text" id="ih-strong" class="form-input" placeholder="Es: Non-morti" maxlength="100" /></div>
+            <div class="form-group"><label>Danni</label>
+              <input type="number" id="ih-danni" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Armatura</label>
+              <input type="number" id="ih-armatura" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>PV</label>
+              <input type="number" id="ih-pv" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group full"><label>Potere 1</label>
+              <input type="text" id="ih-p1" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
+            <div class="form-group full"><label>Potere 2</label>
+              <input type="text" id="ih-p2" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
+            <div class="form-group full"><label>Potere 3</label>
+              <input type="text" id="ih-p3" class="form-input" placeholder="Descrizione potere" maxlength="200" /></div>
+          </div>
+        </div>
+
+        <!-- SERVITORI -->
+        <div class="item-form-section" id="iform-servants">
+          <div class="form-grid">
+            <div class="form-group full"><label>Nome <span class="req">*</span></label>
+              <input type="text" id="is-name" class="form-input" placeholder="Nome servitore" maxlength="100" /></div>
+            <div class="form-group"><label>Rarità</label>
+              <select id="is-rarity" class="form-select">
+                <option value="">Seleziona...</option>
+                <option value="comune">Comune</option><option value="raro">Raro</option>
+                <option value="epico">Epico</option><option value="leggendario">Leggendario</option><option value="unico">Unico</option>
+              </select></div>
+            <div class="form-group"><label>Tipo</label>
+              <input type="text" id="is-type" class="form-input" placeholder="Es: Bestia, Demone..." maxlength="50" /></div>
+            <div class="form-group"><label>Tag</label>
+              <input type="text" id="is-tags" class="form-input" placeholder="Es: Fuoco, Veleno (separati da virgola)" maxlength="200" /></div>
+            <div class="form-group"><label>Danni</label>
+              <input type="number" id="is-danni" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Armatura</label>
+              <input type="number" id="is-armatura" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>PV</label>
+              <input type="number" id="is-pv" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Nome Potere</label>
+              <input type="text" id="is-pnome" class="form-input" placeholder="Nome del potere" maxlength="100" /></div>
+            <div class="form-group full"><label>Descrizione Potere</label>
+              <textarea id="is-pdesc" class="form-textarea" rows="2" maxlength="400" placeholder="Descrivi il potere..."></textarea></div>
+            <div class="form-group"><label>Vulnerabilità</label>
+              <input type="text" id="is-vuln" class="form-input" placeholder="Es: Fuoco, Luce" maxlength="200" /></div>
+            <div class="form-group"><label>Resistenze</label>
+              <input type="text" id="is-res" class="form-input" placeholder="Es: Acqua, Ombra" maxlength="200" /></div>
+            <div class="form-group full"><label>Guanto per Catturare</label>
+              <input type="text" id="is-glove" class="form-input" placeholder="Nome del guanto necessario" maxlength="100" /></div>
+          </div>
+        </div>
+
+        <!-- GUANTI -->
+        <div class="item-form-section" id="iform-gloves">
+          <div class="form-grid">
+            <div class="form-group full"><label>Nome <span class="req">*</span></label>
+              <input type="text" id="ig-name" class="form-input" placeholder="Es: Guanto del Caotico" maxlength="100" /></div>
+            <div class="form-group"><label>Rarità</label>
+              <select id="ig-rarity" class="form-select">
+                <option value="">Seleziona...</option>
+                <option value="comune">Comune</option><option value="raro">Raro</option>
+                <option value="epico">Epico</option><option value="leggendario">Leggendario</option><option value="unico">Unico</option>
+              </select></div>
+            <div class="form-group"><label>Danni</label>
+              <input type="number" id="ig-danni" class="form-input" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Nodi Totali</label>
+              <input type="number" id="ig-nodi" class="form-input" placeholder="0" min="0" max="50" /></div>
+            <div class="form-group full"><label>Descrizione</label>
+              <textarea id="ig-desc" class="form-textarea" rows="2" maxlength="400" placeholder="Descrizione del guanto..."></textarea></div>
+            <div class="form-group full">
+              <label>Nodi Potenziamento <span class="field-hint" style="display:inline">(JSON: [{nome,desc,costo}])</span></label>
+              <textarea id="ig-nodes" class="form-textarea" rows="4" maxlength="2000"
+                placeholder='[{"nome":"Attacco","desc":"Aumenta danni del 5%","costo":1}]'></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('submit-item-overlay')">Annulla</button>
+          <button type="submit" class="btn btn-gold" id="submit-item-btn">📚 Invia per Revisione</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -1606,6 +2003,330 @@ async function saveGamertag() {
 }
 
 // ============================================================
+// SECTION NAV
+// ============================================================
+let currentSection = 'builds';
+
+function setSection(section) {
+  currentSection = section;
+  document.getElementById('builds-section').style.display  = section === 'builds'   ? '' : 'none';
+  document.getElementById('database-section').style.display = section === 'database' ? '' : 'none';
+
+  document.querySelectorAll('.section-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.section === section)
+  );
+
+  const fab = document.getElementById('main-fab');
+  if (section === 'database') {
+    fab.textContent = '＋ Contribuisci';
+    if (section === 'database' && !dbState.loaded) loadDatabase();
+  } else {
+    fab.textContent = '＋ Nuova Build';
+  }
+}
+
+function onFabClick() {
+  if (currentSection === 'database') openSubmitItemModal();
+  else openCreateModal();
+}
+
+// ============================================================
+// DATABASE STATE
+// ============================================================
+const dbState = {
+  type: 'weapons',
+  items: [],
+  loading: false,
+  loaded: false,
+  searchTimer: null,
+  confirmations: {}   // track local confirms: `${type}:${id}` → action
+};
+
+function setDbType(type) {
+  dbState.type = type;
+  document.querySelectorAll('.db-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.type === type)
+  );
+  loadDatabase();
+}
+
+async function loadDatabase() {
+  if (dbState.loading) return;
+  dbState.loading = true;
+
+  const grid = document.getElementById('item-grid');
+  const box  = document.getElementById('db-state-box');
+  grid.innerHTML = '';
+  box.innerHTML = `
+    <div class="state-box">
+      <div class="forge-loader"><span class="forge-sword">📚</span><div class="forge-ring"></div></div>
+      <h3>Consultando il Database...</h3>
+    </div>`;
+
+  try {
+    const type   = dbState.type;
+    const search = document.getElementById('db-search').value.trim();
+    const status = document.getElementById('db-status-filter').value;
+
+    const qs = new URLSearchParams({ status, search });
+    const res  = await fetch(`${API_BASE}/${type}?${qs}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    dbState.items  = json.data;
+    dbState.loaded = true;
+    box.innerHTML  = '';
+
+    if (!json.data.length) {
+      box.innerHTML = `
+        <div class="state-box">
+          <span class="state-icon">📭</span>
+          <h3>Nessun elemento trovato</h3>
+          <p>Sii il primo a contribuire! Clicca "＋ Contribuisci".</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = json.data.map(item => renderItemCard(item, type)).join('');
+    if (typeof gsap !== 'undefined') {
+      gsap.fromTo(grid.querySelectorAll('.item-card'),
+        { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: .05, duration: .3, ease: 'power2.out' });
+    }
+  } catch (err) {
+    document.getElementById('db-state-box').innerHTML = `
+      <div class="state-box">
+        <span class="state-icon">⚠️</span>
+        <h3>Errore</h3><p>${err.message}</p>
+      </div>`;
+  } finally {
+    dbState.loading = false;
+  }
+}
+
+// ============================================================
+// ITEM CARD RENDER
+// ============================================================
+const TYPE_LABELS = { weapons:'Arma', armor:'Armatura', heroes:'Eroe', servants:'Servitore', gloves:'Guanto' };
+
+function rarityBadge(r) {
+  if (!r) return '';
+  return `<span class="rarity-badge rarity-${r}">${r.charAt(0).toUpperCase()+r.slice(1)}</span>`;
+}
+function statusBadge(s) {
+  const lbl = { pending:'In attesa', verified:'Verificato', flagged:'Segnalato' };
+  return `<span class="status-badge status-${s}">${lbl[s]||s}</span>`;
+}
+
+function renderItemCard(item, type) {
+  const key   = `${type}:${item.id}`;
+  const local = dbState.confirmations[key];
+  const confirms = item.confirmations || 0;
+  const flags    = item.flags || 0;
+
+  let statsHtml = '';
+  if (type === 'weapons') {
+    const parts = [];
+    if (item.weapon_type) parts.push(`<span class="item-stat">${item.weapon_type}</span>`);
+    if (item.danni)       parts.push(`<span class="item-stat">⚔ <strong>${item.danni}</strong></span>`);
+    if (item.talisman_slots) parts.push(`<span class="item-stat">💎 ${item.talisman_slots} slot</span>`);
+    if (item.forte_contro_1) parts.push(`<span class="item-stat">✦ ${item.forte_contro_1}</span>`);
+    if (item.forte_contro_2) parts.push(`<span class="item-stat">✦ ${item.forte_contro_2}</span>`);
+    statsHtml = parts.join('');
+  } else if (type === 'armor') {
+    const parts = [];
+    if (item.slot)      parts.push(`<span class="item-stat">${item.slot}</span>`);
+    if (item.armatura)  parts.push(`<span class="item-stat">🛡 <strong>${item.armatura}</strong></span>`);
+    if (item.armor_set) parts.push(`<span class="item-stat">Set: ${item.armor_set}</span>`);
+    if (item.forte_contro) parts.push(`<span class="item-stat">✦ ${item.forte_contro}</span>`);
+    statsHtml = parts.join('');
+  } else if (type === 'heroes') {
+    const parts = [];
+    if (item.class1)   parts.push(`<span class="item-tag">${item.class1}</span>`);
+    if (item.class2)   parts.push(`<span class="item-tag">${item.class2}</span>`);
+    if (item.danni)    parts.push(`<span class="item-stat">⚔ <strong>${item.danni}</strong></span>`);
+    if (item.pv)       parts.push(`<span class="item-stat">❤ <strong>${item.pv}</strong></span>`);
+    statsHtml = `<div class="item-tags">${parts.filter(p=>p.includes('item-tag')).join('')}</div>
+      <div class="item-stats">${parts.filter(p=>p.includes('item-stat')).join('')}</div>`;
+  } else if (type === 'servants') {
+    const vuln = item.vulnerabilities ? item.vulnerabilities.split(',').map(v=>`<span class="item-tag" style="border-color:rgba(229,62,62,.3);color:#fc8181">${v.trim()}</span>`).join('') : '';
+    const res  = item.resistances     ? item.resistances.split(',').map(v=>`<span class="item-tag" style="border-color:rgba(56,161,105,.3);color:#68d391">${v.trim()}</span>`).join('') : '';
+    statsHtml = `
+      ${item.danni || item.pv ? `<div class="item-stats">
+        ${item.danni ? `<span class="item-stat">⚔ <strong>${item.danni}</strong></span>` : ''}
+        ${item.pv    ? `<span class="item-stat">❤ <strong>${item.pv}</strong></span>` : ''}
+      </div>` : ''}
+      ${item.potere_nome ? `<div class="item-stat" style="font-size:.8rem;color:var(--gold)">✨ ${item.potere_nome}</div>` : ''}
+      ${vuln || res ? `<div class="item-tags">${vuln}${res}</div>` : ''}`;
+  } else if (type === 'gloves') {
+    statsHtml = `<div class="item-stats">
+      ${item.danni      ? `<span class="item-stat">⚔ <strong>${item.danni}</strong></span>` : ''}
+      ${item.nodi_totali? `<span class="item-stat">🔷 ${item.nodi_totali} nodi</span>` : ''}
+    </div>
+    ${item.description ? `<div class="item-stat" style="font-size:.8rem;color:var(--text2)">${item.description.slice(0,80)}${item.description.length>80?'…':''}</div>` : ''}`;
+  }
+
+  const canConfirm = !local;
+  const submitter  = item.submitted_by || 'Comunità';
+
+  return `
+    <div class="item-card" data-id="${item.id}" data-type="${type}">
+      <div class="item-card-top">
+        <span class="item-name">${item.name}</span>
+        ${rarityBadge(item.rarity)}
+        ${statusBadge(item.status)}
+      </div>
+      ${statsHtml ? `<div>${statsHtml}</div>` : ''}
+      <div class="item-card-footer">
+        <span class="item-submitter">👤 ${submitter}</span>
+        ${item.status === 'pending' ? `
+        <div class="confirm-row">
+          <button class="confirm-btn ok"  onclick="confirmItemFromUI('${type}','${item.id}','confirm')"
+                  ${local?'disabled':''} title="Confermo che esiste (${confirms}/3)">
+            ✓ ${confirms}
+          </button>
+          <button class="confirm-btn bad" onclick="confirmItemFromUI('${type}','${item.id}','flag')"
+                  ${local?'disabled':''} title="Segnala come errato (${flags}/3)">
+            ✗ ${flags}
+          </button>
+        </div>` : `<span style="font-size:.75rem;color:var(--text3)">${confirms} conferme</span>`}
+      </div>
+    </div>`;
+}
+
+async function confirmItemFromUI(type, id, action) {
+  if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  try {
+    const res  = await fetch(`${API_BASE}/items/${type}/${id}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ voterKey: getVoterKey(), action })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    const key = `${type}:${id}`;
+    dbState.confirmations[key] = action;
+
+    const msg = action === 'confirm' ? '✓ Conferma registrata!' : '✗ Segnalazione registrata!';
+    showToast(msg, 'success');
+    loadDatabase();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============================================================
+// SUBMIT ITEM FORM
+// ============================================================
+let currentItemFormType = 'weapons';
+
+function openSubmitItemModal() {
+  if (!Auth.isLoggedIn()) { openModal('login-overlay'); return; }
+  openModal('submit-item-overlay');
+}
+
+function setItemFormType(type) {
+  currentItemFormType = type;
+  document.querySelectorAll('.type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.itype === type)
+  );
+  document.querySelectorAll('.item-form-section').forEach(s => s.classList.remove('visible'));
+  const sec = document.getElementById(`iform-${type}`);
+  if (sec) sec.classList.add('visible');
+}
+
+function toggleMiticoFields(formType) {
+  const rarityEl = document.getElementById(formType === 'weapons' ? 'iw-rarity' : 'ia-rarity');
+  if (!rarityEl) return;
+  const isMitico = rarityEl.value === 'mitico';
+  const parent   = rarityEl.closest('.item-form-section') || rarityEl.closest('form');
+  parent.querySelectorAll('.mitico-field').forEach(el => {
+    el.style.display = isMitico ? '' : 'none';
+  });
+  if (formType === 'armor') {
+    const setField = parent.querySelector('.armor-set-field');
+    if (setField) setField.style.display = isMitico ? 'none' : '';
+  }
+}
+
+function collectItemForm() {
+  const t = currentItemFormType;
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const n = id => { const el = document.getElementById(id); return el && el.value ? Number(el.value) : undefined; };
+
+  if (t === 'weapons') return {
+    name: g('iw-name'), rarity: g('iw-rarity'), weapon_type: g('iw-type'),
+    danni: n('iw-danni'), talisman_slots: n('iw-talisman'),
+    forte_contro_1: g('iw-forte1'), forte_contro_2: g('iw-forte2')
+  };
+  if (t === 'armor') return {
+    name: g('ia-name'), rarity: g('ia-rarity'), slot: g('ia-slot'),
+    armor_set: g('ia-set'), armatura: n('ia-armatura'),
+    talisman_slots: n('ia-talisman'), forte_contro: g('ia-forte')
+  };
+  if (t === 'heroes') return {
+    name: g('ih-name'), rarity: g('ih-rarity'),
+    class1: g('ih-class1'), class2: g('ih-class2'), strong_vs: g('ih-strong'),
+    danni: n('ih-danni'), armatura: n('ih-armatura'), pv: n('ih-pv'),
+    potere1: g('ih-p1'), potere2: g('ih-p2'), potere3: g('ih-p3')
+  };
+  if (t === 'servants') return {
+    name: g('is-name'), rarity: g('is-rarity'), type: g('is-type'),
+    tags: g('is-tags'), danni: n('is-danni'), armatura: n('is-armatura'), pv: n('is-pv'),
+    potere_nome: g('is-pnome'), potere_desc: g('is-pdesc'),
+    vulnerabilities: g('is-vuln'), resistances: g('is-res'), capture_glove: g('is-glove')
+  };
+  if (t === 'gloves') {
+    let nodes = undefined;
+    const raw = g('ig-nodes');
+    if (raw) { try { nodes = JSON.parse(raw); } catch { throw new Error('JSON nodi non valido'); } }
+    return {
+      name: g('ig-name'), rarity: g('ig-rarity'),
+      danni: n('ig-danni'), nodi_totali: n('ig-nodi'),
+      description: g('ig-desc'), nodes_json: nodes
+    };
+  }
+  return {};
+}
+
+async function submitItem(event) {
+  event.preventDefault();
+  const btn = document.getElementById('submit-item-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Invio...';
+
+  try {
+    let body;
+    try { body = collectItemForm(); } catch(e) { throw e; }
+    if (!body.name) throw new Error('Il nome è obbligatorio');
+
+    body.submitted_by = Auth.user?.gamertag || '';
+
+    const res  = await fetch(`${API_BASE}/${currentItemFormType}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+
+    showToast('📚 Elemento inviato! Attende verifica della community.', 'success');
+    closeModal('submit-item-overlay');
+    document.getElementById('submit-item-form').reset();
+
+    if (currentSection === 'database' && dbState.type === currentItemFormType) {
+      document.getElementById('db-status-filter').value = 'pending';
+      loadDatabase();
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📚 Invia per Revisione';
+  }
+}
+
+// ============================================================
 // VOTER IDENTITY
 // ============================================================
 function getVoterKey() {
@@ -1760,7 +2481,6 @@ function buildCard(b) {
   const votes = getVotes();
   const voted = votes[b.id];
   const score = b.upvotes - b.downvotes;
-  const heroes = heroList(b);
 
   return `
     <div class="build-card" data-id="${b.id}" data-mode="${b.mode}">
@@ -2145,7 +2865,12 @@ function overlayClick(ev, id) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeCreateModal(); closeDetailModal(); }
+  if (e.key === 'Escape') {
+    closeCreateModal(); closeDetailModal();
+    closeModal('submit-item-overlay');
+    closeModal('login-overlay');
+    closeModal('profile-overlay');
+  }
 });
 
 // ============================================================
@@ -2165,6 +2890,11 @@ document.getElementById('search-input').addEventListener('input', e => {
 
 document.getElementById('f-desc').addEventListener('input', e => {
   document.getElementById('desc-counter').textContent = `${e.target.value.length} / 1000`;
+});
+
+document.getElementById('db-search').addEventListener('input', e => {
+  clearTimeout(dbState.searchTimer);
+  dbState.searchTimer = setTimeout(loadDatabase, 380);
 });
 
 // ============================================================
