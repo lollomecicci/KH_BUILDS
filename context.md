@@ -98,8 +98,14 @@ fly secrets set \
 | Ruolo | Permessi |
 |-------|----------|
 | `user` | Legge build e DB, vota build, salva build |
-| `mod` | Come user + conferma/segnala item nel DB |
-| `admin` | Tutto: cambia ruoli, forza status item, accede pannello admin |
+| `mod` | Come user + conferma/segnala item nel DB + pannello admin (solo gestione utenti `user`) |
+| `admin` | Tutto: cambia ruoli, forza status item, accede pannello admin completo, può bannare/eliminare utenti |
+
+### Gerarchia gestione utenti
+- **Admin** può modificare (gamertag, contributor, ruolo) e eliminare `user` e `mod` (non altri admin)
+- **Mod** può modificare (gamertag, contributor, NO ruolo) solo `user` (non mod o admin)
+- **Elimina** riservata ad admin, con opzione ban (blocca ri-registrazione via `provider_id`)
+- **Nessuno** può modificare se stesso tramite il pannello admin
 
 ### Flag `contributor` (separato dal ruolo)
 - Qualsiasi utente può attivarlo dal profilo (o all'onboarding)
@@ -143,11 +149,27 @@ Migrazioni safe via `ALTER TABLE ADD COLUMN` in try/catch.
 | provider | TEXT | `discord` / `google` |
 | provider_id | TEXT | ID univoco del provider |
 | avatar_url | TEXT | URL avatar dal provider |
+| email | TEXT | Email (popolata da Google OAuth) |
 | role | TEXT | `user` / `mod` / `admin` — default `user` |
 | contributor | INTEGER | 0 / 1 — default 0 |
 | created_at | TEXT | ISO 8601 |
 
 UNIQUE `(provider, provider_id)`.
+
+### Tabella `banned_accounts`
+
+| Colonna | Tipo | Note |
+|---------|------|------|
+| id | TEXT PK | UUID |
+| provider | TEXT | `discord` / `google` |
+| provider_id | TEXT | ID OAuth univoco |
+| email | TEXT | Email al momento del ban |
+| gamertag | TEXT | Gamertag al momento del ban |
+| reason | TEXT | Motivo del ban |
+| banned_by | TEXT | Gamertag dell'admin che ha bannato |
+| banned_at | TEXT | ISO 8601 |
+
+UNIQUE `(provider, provider_id)`. `upsertUser()` controlla questa tabella prima di ogni login.
 
 ### Tabella `builds`
 
@@ -273,6 +295,7 @@ PK `(item_id, item_type, voter_key)` — `voter_key` = `userId` JWT per utenti a
 ```js
 requireAuth(req,res,next)         // Bearer JWT valido
 requireContributor(req,res,next)  // contributor=1 OR role mod/admin
+requireModOrAdmin(req,res,next)   // role mod OR admin (JWT only)
 requireAdmin(req,res,next)        // role='admin' OR X-Admin-Token header
 ```
 
@@ -334,8 +357,12 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 | POST | `/api/gloves` | Contributor | → pending |
 | POST | `/api/items/:type/:id/confirm` | Contributor | `{ action }` |
 | PATCH | `/api/admin/items/:type/:id/status` | Admin | |
-| GET | `/api/admin/users` | Admin | search, page |
-| PATCH | `/api/admin/users/:id/role` | Admin | `{ role }` |
+| PATCH | `/api/admin/items/:type/:id` | Admin | Modifica campi item |
+| GET | `/api/admin/users` | Mod/Admin | search, page |
+| PATCH | `/api/admin/users/:id` | Mod/Admin | `{ gamertag, contributor, role? }` — gerarchia ruoli |
+| DELETE | `/api/admin/users/:id` | Admin | `{ ban?: { reason, banned_by } }` — ban opzionale |
+| GET | `/api/admin/banned` | Admin | Lista account bannati |
+| DELETE | `/api/admin/banned/:id` | Admin | Sblocca account |
 | POST | `/api/ai/parse-item` | Contributor | `{ image: base64, mimeType }` → campi item |
 | GET | `/health` | — | |
 
@@ -359,10 +386,13 @@ canContribute()      // Auth.user?.contributor || role mod/admin
   - Auto-switch al tab tipo corretto (weapons/armor/ecc.)
   - Campi mitico condizionali (forte_contro visibile solo se rarity=mitico)
 
-### Sezione 👑 Admin (solo admin)
-- Tabella utenti: avatar, gamertag, provider, ruolo (dropdown), contributor flag, data
-- Ricerca utenti
-- Dropdown ruolo per riga (non modificabile su se stessi)
+### Sezione 👑 Admin (mod + admin)
+Visibile a `mod` e `admin`. Tab interni:
+- **👥 Utenti** (mod + admin): tabella utenti con pulsanti Modifica (✏️) e Elimina (🗑️)
+  - Modifica visibile se editor ha rango superiore all'utente target
+  - Elimina visibile solo ad admin sugli utenti con rango inferiore
+  - Rank: user=0, mod=1, admin=2
+- **🚫 Bannati** (solo admin): lista account bannati con gamertag, provider, email, motivo, chi ha bannato; pulsante Sblocca
 
 ### Modali globali
 | ID | Contenuto |
@@ -373,6 +403,8 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 | `#create-overlay` | Form nuova build |
 | `#detail-overlay` | Dettaglio build + voto |
 | `#submit-item-overlay` | Form submit item DB (tipo dinamico) |
+| `#edit-user-overlay` | Modifica utente: gamertag, contributor, ruolo (solo admin) |
+| `#delete-user-overlay` | Elimina utente + opzione ban con motivo |
 
 ---
 
@@ -399,6 +431,7 @@ listServants / getServant / createServant
 listGloves / getGlove / createGlove
 confirmItem / adminSetStatus
 upsertUser / getUserById / updateGamertag / setContributor / updateUserRole / listUsers
+updateUserDetails / deleteUser / listBannedAccounts / unbanAccount
 ```
 
 ### ITEM_TABLES mapping
@@ -432,6 +465,8 @@ npm run dev   # http://localhost:3000
 - **JWT**: payload include `role` + `contributor`, scadenza 30d, nuovo token emesso su ogni modifica profilo
 - **voter_key confirm**: usa `userId` JWT (non localStorage) → un parere per account, non aggirabile
 - **Bootstrap admin**: primo `upsertUser` con DB senza admin → `role='admin'`, `contributor=1`
+- **Ban check**: `upsertUser()` controlla `banned_accounts` per `(provider, provider_id)` prima di ogni login/registrazione → lancia `Error('BANNED')` → OAuth callback redirect `/?auth_error=banned`
+- **Gerarchia modifica utenti**: `ROLE_RANK = { user:0, mod:1, admin:2 }` — editor può modificare/eliminare solo utenti con rango strettamente inferiore
 - **voteBuild atomicità**: `db.batch(['write'])` → UPDATE + INSERT in transazione
 - **Cold start Fly.io**: `auto_stop_machines = 'stop'` — riavvio ~3-5s
 - **GAS legacy**: branch `IS_GAS` mantenuto nel frontend, non attivo
