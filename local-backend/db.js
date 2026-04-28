@@ -154,7 +154,32 @@ async function initSchema() {
     { sql: `CREATE INDEX IF NOT EXISTS idx_heroes_status    ON heroes(status)`,    args: [] },
     { sql: `CREATE INDEX IF NOT EXISTS idx_servants_status  ON servants(status)`,  args: [] },
     { sql: `CREATE INDEX IF NOT EXISTS idx_gloves_status    ON gloves(status)`,    args: [] },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS talismans (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        category        TEXT NOT NULL DEFAULT '',
+        description     TEXT NOT NULL DEFAULT '',
+        attack_type     TEXT NOT NULL DEFAULT '',
+        effect_type     TEXT NOT NULL DEFAULT '',
+        val_comune      REAL,
+        val_raro        REAL,
+        val_epico       REAL,
+        val_leggendario REAL,
+        val_unico       REAL,
+        status          TEXT NOT NULL DEFAULT 'verified',
+        submitted_by    TEXT NOT NULL DEFAULT '',
+        confirmations   INTEGER NOT NULL DEFAULT 0,
+        flags           INTEGER NOT NULL DEFAULT 0,
+        timestamp       TEXT NOT NULL
+      )`,
+      args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_talismans_category ON talismans(category)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_talismans_status   ON talismans(status)`,   args: [] },
   ], 'write');
+
+  await seedTalismans();
 
   await db.execute({
     sql: `CREATE TABLE IF NOT EXISTS users (
@@ -439,11 +464,12 @@ function rowToObj(row) {
 
 // Accept both plural (from URL path) and singular (legacy) keys
 const ITEM_TABLES = {
-  weapon: 'weapons',       weapons: 'weapons',
-  armor:  'armor_pieces',  armor_pieces: 'armor_pieces',
-  hero:   'heroes',        heroes: 'heroes',
-  servant:'servants',      servants: 'servants',
-  glove:  'gloves',        gloves: 'gloves',
+  weapon:   'weapons',       weapons:   'weapons',
+  armor:    'armor_pieces',  armor_pieces: 'armor_pieces',
+  hero:     'heroes',        heroes:    'heroes',
+  servant:  'servants',      servants:  'servants',
+  glove:    'gloves',        gloves:    'gloves',
+  talisman: 'talismans',     talismans: 'talismans',
 };
 const CONFIRM_THRESHOLD = 3;
 const FLAG_THRESHOLD    = 3;
@@ -1144,6 +1170,174 @@ async function listUsers({ search = '', page = 1, limit = 50 } = {}) {
   return { users: res.rows.map(userToObj), total, page: p, pages };
 }
 
+// ─── Talismans ───────────────────────────────────────────────────────────────
+
+const TALISMAN_SEED = [
+  // EFFETTO — inflict status with attack type
+  { id:'tal-eff-vel-cat', name:'Veleno - Attacchi a catena',    category:'effetto',        description:'Aggiunge probabilità di infliggere Veleno con attacchi a catena',    attack_type:'catena',   effect_type:'veleno'       },
+  { id:'tal-eff-aci-cat', name:'Acido - Attacchi a catena',     category:'effetto',        description:'Aggiunge probabilità di infliggere Acido con attacchi a catena',     attack_type:'catena',   effect_type:'acido'        },
+  { id:'tal-eff-ust-cat', name:'Ustione - Attacchi a catena',   category:'effetto',        description:'Aggiunge probabilità di infliggere Ustione con attacchi a catena',   attack_type:'catena',   effect_type:'ustione'      },
+  { id:'tal-eff-ust-lat', name:'Ustione - Attacchi laterali',   category:'effetto',        description:'Aggiunge probabilità di infliggere Ustione con attacchi laterali',   attack_type:'laterale', effect_type:'ustione'      },
+  // DANNO — bonus damage vs status-afflicted enemies
+  { id:'tal-dan-vel-ext', name:'Danno estremo vs Veleno',       category:'danno',          description:'Aumenta il danno da attacco estremo contro nemici affetti da Veleno', attack_type:'estremo',  effect_type:'veleno'       },
+  { id:'tal-dan-aci-ext', name:'Danno estremo vs Acido',        category:'danno',          description:'Aumenta il danno da attacco estremo contro nemici affetti da Acido',  attack_type:'estremo',  effect_type:'acido'        },
+  { id:'tal-dan-vel-gen', name:'Danno vs Veleno',               category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Veleno',         attack_type:'',         effect_type:'veleno'       },
+  { id:'tal-dan-aci-gen', name:'Danno vs Acido',                category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Acido',          attack_type:'',         effect_type:'acido'        },
+  { id:'tal-dan-ust-gen', name:'Danno vs Ustione',              category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Ustione',        attack_type:'',         effect_type:'ustione'      },
+  // INDEBOLIMENTO — inflict debuffs with extreme attacks
+  { id:'tal-ind-con-ext', name:'Congelamento - Attacchi estremi', category:'indebolimento', description:'Aggiunge probabilità di infliggere Congelamento con attacchi estremi', attack_type:'estremo', effect_type:'congelamento' },
+  { id:'tal-ind-sto-ext', name:'Stordimento - Attacchi estremi',  category:'indebolimento', description:'Aggiunge probabilità di infliggere Stordimento con attacchi estremi',  attack_type:'estremo', effect_type:'stordimento'  },
+  { id:'tal-ind-dis-ext', name:'Distrazione - Attacchi estremi',  category:'indebolimento', description:'Aggiunge probabilità di infliggere Distrazione con attacchi estremi',  attack_type:'estremo', effect_type:'distrazione'  },
+  { id:'tal-ind-deb-ext', name:'Debolezza - Attacchi estremi',    category:'indebolimento', description:'Aggiunge probabilità di infliggere Debolezza con attacchi estremi',    attack_type:'estremo', effect_type:'debolezza'    },
+  // RAFFORZAMENTO — gain buffs with initial attacks
+  { id:'tal-raf-rig-ini', name:'Rigenerazione - Attacchi iniziali',  category:'rafforzamento', description:'Aggiunge probabilità di ottenere Rigenerazione con attacchi iniziali',  attack_type:'iniziale', effect_type:'rigenerazione'  },
+  { id:'tal-raf-con-ini', name:'Concentrazione - Attacchi iniziali', category:'rafforzamento', description:'Aggiunge probabilità di ottenere Concentrazione con attacchi iniziali', attack_type:'iniziale', effect_type:'concentrazione' },
+  { id:'tal-raf-pro-ini', name:'Protezione - Attacchi iniziali',     category:'rafforzamento', description:'Aggiunge probabilità di ottenere Protezione con attacchi iniziali',     attack_type:'iniziale', effect_type:'protezione'     },
+  { id:'tal-raf-fur-ini', name:'Furore - Attacchi iniziali',         category:'rafforzamento', description:'Aggiunge probabilità di ottenere Furore con attacchi iniziali',         attack_type:'iniziale', effect_type:'furore'         },
+  // CRITICI — critical hit multipliers and chances
+  { id:'tal-cri-mol-ext', name:'Critico estremo - Moltiplicatore',   category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi estremi',    attack_type:'estremo',  effect_type:'' },
+  { id:'tal-cri-mol-cat', name:'Critico a catena - Moltiplicatore',  category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi a catena',   attack_type:'catena',   effect_type:'' },
+  { id:'tal-cri-mol-lat', name:'Critico laterale - Moltiplicatore',  category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi laterali',   attack_type:'laterale', effect_type:'' },
+  { id:'tal-cri-pro-lat', name:'Critico laterale - Probabilità',     category:'critico', description:'Aumenta la probabilità di danno critico degli attacchi laterali',       attack_type:'laterale', effect_type:'' },
+  // DIFESA — armor and HP
+  { id:'tal-dif-arm',     name:'Armatura',                      category:'difesa',     description:'Aumenta i punti armatura',                                         attack_type:'', effect_type:'' },
+  { id:'tal-dif-pv',      name:'PV',                            category:'difesa',     description:'Aumenta i PV',                                                     attack_type:'', effect_type:'' },
+  // RESISTENZA — resist debuffs and status damage
+  { id:'tal-res-sto',     name:'Resistenza Stordimento',        category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Stordimento',       attack_type:'', effect_type:'stordimento'  },
+  { id:'tal-res-dis',     name:'Resistenza Distrazione',        category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Distrazione',       attack_type:'', effect_type:'distrazione'  },
+  { id:'tal-res-vul',     name:'Resistenza Vulnerabilità',      category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Vulnerabilità',     attack_type:'', effect_type:'vulnerabilità' },
+  { id:'tal-res-vel',     name:'Riduzione danno Veleno',        category:'resistenza', description:'Diminuisce il danno da Veleno subito',                             attack_type:'', effect_type:'veleno'       },
+  { id:'tal-res-con',     name:'Resistenza Congelamento',       category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Congelamento',      attack_type:'', effect_type:'congelamento'  },
+  // STATO — strengthen active status effects
+  { id:'tal-sta-pen-vul', name:'Penetrazione Vulnerabilità',    category:'stato',      description:'Riduce la resistenza dei nemici all\'effetto Vulnerabilità',       attack_type:'', effect_type:'vulnerabilità' },
+  { id:'tal-sta-pen-deb', name:'Penetrazione Debolezza',        category:'stato',      description:'Riduce la resistenza dei nemici all\'effetto Debolezza',           attack_type:'', effect_type:'debolezza'    },
+  { id:'tal-sta-pot-aci', name:'Potenziamento Acido',           category:'stato',      description:'Acido infligge più danno ai nemici',                               attack_type:'', effect_type:'acido'        },
+  { id:'tal-sta-pot-ust', name:'Potenziamento Ustione',         category:'stato',      description:'Ustione infligge più danno ai nemici',                             attack_type:'', effect_type:'ustione'      },
+  // EROI — hero power bonuses by class
+  { id:'tal-ero-alc',     name:'Eroi alchimisti - Poteri',      category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi alchimisti', attack_type:'', effect_type:'' },
+  { id:'tal-ero-mag',     name:'Eroi maghi - Poteri',           category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi maghi',      attack_type:'', effect_type:'' },
+  { id:'tal-ero-cac',     name:'Eroi cacciatori - Poteri',      category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi cacciatori', attack_type:'', effect_type:'' },
+  { id:'tal-ero-gue',     name:'Eroi guerrieri - Poteri',       category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi guerrieri',  attack_type:'', effect_type:'' },
+  // SERVITORI — servant bonuses
+  { id:'tal-ser-gua',     name:'Guarigione poteri servitori',   category:'servitori',  description:'I poteri di tutti i servitori conferiscono più guarigione',         attack_type:'', effect_type:'' },
+  { id:'tal-ser-dan-pod', name:'Danno poteri servitori',        category:'servitori',  description:'I poteri di tutti i servitori infliggono più danno',                attack_type:'', effect_type:'' },
+  { id:'tal-ser-dan-cri', name:'Danno critico servitori',       category:'servitori',  description:'Gli attacchi critici di tutti i servitori infliggono più danno',    attack_type:'', effect_type:'' },
+  { id:'tal-ser-dan-nor', name:'Danno normale servitori',       category:'servitori',  description:'Gli attacchi normali di tutti i servitori infliggono più danno',    attack_type:'', effect_type:'' },
+];
+
+async function seedTalismans() {
+  const count = await db.execute({ sql: 'SELECT COUNT(*) as cnt FROM talismans', args: [] });
+  if (Number(count.rows[0].cnt) > 0) return;
+
+  const ts = new Date().toISOString();
+  const batch = TALISMAN_SEED.map(t => ({
+    sql: `INSERT OR IGNORE INTO talismans
+          (id,name,category,description,attack_type,effect_type,val_comune,val_raro,val_epico,val_leggendario,val_unico,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,NULL,NULL,NULL,NULL,NULL,'verified','system',0,0,?)`,
+    args: [t.id, t.name, t.category, t.description, t.attack_type, t.effect_type, ts]
+  }));
+  await db.batch(batch, 'write');
+}
+
+function talismanToObj(row) {
+  const s = k => String(row[k] || '');
+  const n = k => (row[k] != null ? Number(row[k]) : null);
+  return {
+    id:              s('id'),
+    name:            s('name'),
+    category:        s('category'),
+    description:     s('description'),
+    attack_type:     s('attack_type'),
+    effect_type:     s('effect_type'),
+    val_comune:      n('val_comune'),
+    val_raro:        n('val_raro'),
+    val_epico:       n('val_epico'),
+    val_leggendario: n('val_leggendario'),
+    val_unico:       n('val_unico'),
+    status:          s('status'),
+    submitted_by:    s('submitted_by'),
+    confirmations:   Number(row.confirmations || 0),
+    flags:           Number(row.flags || 0),
+    timestamp:       s('timestamp'),
+  };
+}
+
+const VALID_TALISMAN_CATEGORIES = ['effetto','danno','indebolimento','rafforzamento','critico','difesa','resistenza','stato','eroi','servitori'];
+
+async function listTalismans({ category = '', status = 'verified', search = '' } = {}) {
+  const conds = [];
+  const args  = [];
+  if (status !== 'all')   { conds.push('status = ?');   args.push(status); }
+  if (category)           { conds.push('category = ?'); args.push(category); }
+  if (search && search.trim()) {
+    const q = '%' + search.trim() + '%';
+    conds.push('(name LIKE ? OR description LIKE ? OR effect_type LIKE ?)');
+    args.push(q, q, q);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const res = await db.execute({ sql: `SELECT * FROM talismans ${where} ORDER BY category ASC, name ASC`, args });
+  return res.rows.map(talismanToObj);
+}
+
+async function getTalisman(id) {
+  if (!id) throw new Error('ID talismano mancante');
+  const res = await db.execute({ sql: 'SELECT * FROM talismans WHERE id = ?', args: [id] });
+  return res.rows.length ? talismanToObj(res.rows[0]) : null;
+}
+
+async function createTalisman(d) {
+  const name     = (d.name     || '').trim();
+  const category = (d.category || '').trim().toLowerCase();
+  if (!name)                                          throw new Error('Nome talismano obbligatorio');
+  if (!VALID_TALISMAN_CATEGORIES.includes(category)) throw new Error('Categoria non valida');
+
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO talismans (id,name,category,description,attack_type,effect_type,val_comune,val_raro,val_epico,val_leggendario,val_unico,status,submitted_by,confirmations,flags,timestamp)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,'pending',?,0,0,?)`,
+    args: [
+      id, name, category,
+      (d.description || '').trim(),
+      (d.attack_type || '').trim().toLowerCase(),
+      (d.effect_type || '').trim().toLowerCase(),
+      d.val_comune      != null ? Number(d.val_comune)      : null,
+      d.val_raro        != null ? Number(d.val_raro)        : null,
+      d.val_epico       != null ? Number(d.val_epico)       : null,
+      d.val_leggendario != null ? Number(d.val_leggendario) : null,
+      d.val_unico       != null ? Number(d.val_unico)       : null,
+      (d.submitted_by || '').trim(),
+      new Date().toISOString()
+    ]
+  });
+  return { id, message: 'Talismano inviato per verifica!' };
+}
+
+async function adminUpdateTalisman(id, d) {
+  if (!id) throw new Error('ID talismano mancante');
+  const exists = await db.execute({ sql: 'SELECT id FROM talismans WHERE id = ?', args: [id] });
+  if (!exists.rows.length) throw new Error('Talismano non trovato');
+
+  const sets = [];
+  const args = [];
+
+  if (d.name !== undefined)            { sets.push('name = ?');            args.push((d.name || '').trim()); }
+  if (d.category !== undefined)        { sets.push('category = ?');        args.push((d.category || '').trim().toLowerCase()); }
+  if (d.description !== undefined)     { sets.push('description = ?');     args.push((d.description || '').trim()); }
+  if (d.attack_type !== undefined)     { sets.push('attack_type = ?');     args.push((d.attack_type || '').trim().toLowerCase()); }
+  if (d.effect_type !== undefined)     { sets.push('effect_type = ?');     args.push((d.effect_type || '').trim().toLowerCase()); }
+  if ('val_comune'      in d)          { sets.push('val_comune = ?');      args.push(d.val_comune      != null ? Number(d.val_comune)      : null); }
+  if ('val_raro'        in d)          { sets.push('val_raro = ?');        args.push(d.val_raro        != null ? Number(d.val_raro)        : null); }
+  if ('val_epico'       in d)          { sets.push('val_epico = ?');       args.push(d.val_epico       != null ? Number(d.val_epico)       : null); }
+  if ('val_leggendario' in d)          { sets.push('val_leggendario = ?'); args.push(d.val_leggendario != null ? Number(d.val_leggendario) : null); }
+  if ('val_unico'       in d)          { sets.push('val_unico = ?');       args.push(d.val_unico       != null ? Number(d.val_unico)       : null); }
+  if (d.status !== undefined)          { sets.push('status = ?');          args.push((d.status || 'verified').trim()); }
+
+  if (!sets.length) throw new Error('Nessun campo da aggiornare');
+  args.push(id);
+  await db.execute({ sql: `UPDATE talismans SET ${sets.join(', ')} WHERE id = ?`, args });
+  return await getTalisman(id);
+}
+
 module.exports = {
   initSchema,
   listBuilds, getBuild, createBuild, voteBuild, getStats,
@@ -1153,6 +1347,7 @@ module.exports = {
   listHeroes, getHero, createHero,
   listServants, getServant, createServant,
   listGloves, getGlove, createGlove,
+  listTalismans, getTalisman, createTalisman, adminUpdateTalisman,
   confirmItem, adminSetStatus, adminUpdateItem,
   upsertUser, getUserById, updateGamertag, setContributor, updateUserRole, listUsers,
   updateUserDetails, deleteUser, listBannedAccounts, unbanAccount,

@@ -625,6 +625,53 @@ app.post('/api/gloves', requireAuth, requireContributor, async (req, res) => {
   }
 });
 
+// ---- TALISMANS -------------------------------------------------
+
+app.get('/api/talismans', async (req, res) => {
+  try {
+    const data = await db.listTalismans({
+      category: req.query.category || '',
+      status:   req.query.status   || 'verified',
+      search:   req.query.search   || '',
+    });
+    res.json(ok(data));
+  } catch (err) {
+    console.error('[listTalismans]', err.message);
+    res.status(500).json(fail(err.message));
+  }
+});
+
+app.get('/api/talismans/:id', async (req, res) => {
+  try {
+    const t = await db.getTalisman(req.params.id);
+    if (!t) return res.status(404).json(fail('Talismano non trovato'));
+    res.json(ok(t));
+  } catch (err) {
+    console.error('[getTalisman]', err.message);
+    res.status(500).json(fail(err.message));
+  }
+});
+
+app.post('/api/talismans', requireAuth, requireContributor, async (req, res) => {
+  try {
+    const body = { ...req.body, submitted_by: req.user.gamertag };
+    const data = await db.createTalisman(body);
+    res.status(201).json(ok(data));
+  } catch (err) {
+    console.error('[createTalisman]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.patch('/api/admin/talismans/:id', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.adminUpdateTalisman(req.params.id, req.body)));
+  } catch (err) {
+    console.error('[adminUpdateTalisman]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
 // ---- AI SCREENSHOT PARSING -------------------------------------
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
