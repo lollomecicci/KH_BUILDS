@@ -4032,6 +4032,10 @@ function renderDetailBody(b) {
       <button class="user-action-btn" onclick="adminEditBuild('${b.id}')">✏️ Modifica</button>
       <button class="user-action-btn" onclick="adminToggleBuildStatus('${b.id}','${b.status}')">${b.status==='hidden'?'👁 Mostra':'🙈 Nascondi'}</button>
       <button class="user-action-btn danger" onclick="adminRemoveBuild('${b.id}')">🗑️ Elimina</button>
+    </div>` : Auth.user?.userId && b.owner_id && Auth.user.userId === b.owner_id ? `
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <span style="font-size:.75rem;color:var(--text3);align-self:center;margin-right:4px">✏️ La tua build:</span>
+      <button class="user-action-btn" onclick="adminEditBuild('${b.id}')">✏️ Modifica</button>
     </div>` : ''}
   `;
 }
@@ -4067,6 +4071,7 @@ function closeCreateModal() {
 function resetForm() {
   document.getElementById('create-form').reset();
   document.getElementById('f-edit-id').value = '';
+  document.getElementById('f-author').readOnly = false;
   document.getElementById('create-modal-title').textContent = '⚔ Nuova Build';
   document.getElementById('submit-btn').style.display = '';
   document.getElementById('submit-edit-btn').style.display = 'none';
@@ -4080,7 +4085,8 @@ async function adminEditBuild(id) {
     document.getElementById('f-edit-id').value    = b.id;
     document.getElementById('f-title').value      = b.title;
     document.getElementById('f-mode').value       = b.mode;
-    document.getElementById('f-author').value     = b.author;
+    document.getElementById('f-author').value    = b.author;
+    document.getElementById('f-author').readOnly = Auth.user?.role !== 'admin';
     document.getElementById('f-weapon').value     = b.weapon;
     document.getElementById('f-helmet').value     = b.helmet;
     document.getElementById('f-spalle').value     = b.spalle;
@@ -4168,7 +4174,7 @@ async function submitBuild(event) {
 
   try {
     if (isEdit) {
-      const res  = await fetch(`${API_BASE}/admin/builds/${editId}`, {
+      const res  = await fetch(`${API_BASE}/builds/${editId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
         body: JSON.stringify(data)

@@ -123,10 +123,27 @@ app.get('/api/builds/:id', async (req, res) => {
 
 app.post('/api/builds', async (req, res) => {
   try {
-    const data = await db.createBuild(req.body);
+    const user  = parseToken(req);
+    const owner_id = user ? user.userId : '';
+    const data = await db.createBuild({ ...req.body, owner_id });
     res.status(201).json(ok(data));
   } catch (err) {
     console.error('[createBuild]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.patch('/api/builds/:id', requireAuth, async (req, res) => {
+  try {
+    const build = await db.getBuild(req.params.id);
+    if (!build) return res.status(404).json(fail('Build non trovata'));
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = build.owner_id && build.owner_id === req.user.userId;
+    if (!isAdmin && !isOwner) return res.status(403).json(fail('Non autorizzato a modificare questa build'));
+    const data = isAdmin ? req.body : { ...req.body, author: build.author };
+    res.json(ok(await db.adminUpdateBuild(req.params.id, data)));
+  } catch (err) {
+    console.error('[updateBuild]', err.message);
     res.status(400).json(fail(err.message));
   }
 });

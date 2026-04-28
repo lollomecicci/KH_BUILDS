@@ -31,7 +31,8 @@ async function initSchema() {
         author      TEXT NOT NULL DEFAULT 'Anonimo',
         upvotes     INTEGER NOT NULL DEFAULT 0,
         downvotes   INTEGER NOT NULL DEFAULT 0,
-        status      TEXT NOT NULL DEFAULT 'active'
+        status      TEXT NOT NULL DEFAULT 'active',
+        owner_id    TEXT NOT NULL DEFAULT ''
       )`,
       args: []
     },
@@ -217,6 +218,7 @@ async function initSchema() {
     `ALTER TABLE heroes   ADD COLUMN potere1_desc  TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE heroes   ADD COLUMN potere2_desc  TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE users    ADD COLUMN email         TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN owner_id      TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await db.execute({ sql, args: [] }); } catch (_) { /* column already exists */ }
@@ -288,8 +290,8 @@ async function createBuild(d) {
 
   await db.execute({
     sql: `INSERT INTO builds
-          (id,timestamp,title,mode,weapon,helmet,spalle,chest,braccia,gloves,boots,hero1,hero2,servant1,servant2,charms,description,author,upvotes,downvotes,status)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active')`,
+          (id,timestamp,title,mode,weapon,helmet,spalle,chest,braccia,gloves,boots,hero1,hero2,servant1,servant2,charms,description,author,upvotes,downvotes,status,owner_id)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active',?)`,
     args: [
       id, ts, title, mode, weapon,
       (d.helmet  ||'').trim(), (d.spalle  ||'').trim(),
@@ -297,7 +299,8 @@ async function createBuild(d) {
       (d.gloves  ||'').trim(), (d.boots   ||'').trim(),
       (d.hero1   ||'').trim(), (d.hero2   ||'').trim(),
       (d.servant1||'').trim(), (d.servant2||'').trim(),
-      (d.charms||'').trim(), (d.description||'').trim(), author
+      (d.charms||'').trim(), (d.description||'').trim(), author,
+      (d.owner_id||'').trim()
     ]
   });
 
@@ -427,7 +430,8 @@ function rowToObj(row) {
     author:      s('author') || 'Anonimo',
     upvotes:     n('upvotes'),
     downvotes:   n('downvotes'),
-    status:      s('status') || 'active'
+    status:      s('status') || 'active',
+    owner_id:    s('owner_id'),
   };
 }
 
