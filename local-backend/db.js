@@ -304,6 +304,53 @@ async function createBuild(d) {
   return { id, message: 'Build creata con successo!' };
 }
 
+async function adminUpdateBuild(id, d) {
+  if (!id) throw new Error('ID build mancante');
+  const exists = await db.execute({ sql: 'SELECT id FROM builds WHERE id = ?', args: [id] });
+  if (!exists.rows.length) throw new Error('Build non trovata');
+
+  const title  = (d.title  || '').trim();
+  const mode   = (d.mode   || '').trim().toLowerCase();
+  const weapon = (d.weapon || '').trim();
+  if (!title)                                       throw new Error('Il titolo è obbligatorio');
+  if (title.length > 100)                          throw new Error('Titolo troppo lungo');
+  if (!mode)                                        throw new Error('Modalità obbligatoria');
+  if (!['arena','pve','war','rift'].includes(mode)) throw new Error('Modalità non valida');
+  if (!weapon)                                      throw new Error("Arma obbligatoria");
+  if ((d.description || '').length > 1000)         throw new Error('Descrizione troppo lunga');
+
+  await db.execute({
+    sql: `UPDATE builds SET title=?,mode=?,weapon=?,helmet=?,spalle=?,chest=?,braccia=?,gloves=?,boots=?,
+          hero1=?,hero2=?,servant1=?,servant2=?,charms=?,description=?,author=? WHERE id=?`,
+    args: [
+      title, mode, weapon,
+      (d.helmet  ||'').trim(), (d.spalle  ||'').trim(),
+      (d.chest   ||'').trim(), (d.braccia ||'').trim(),
+      (d.gloves  ||'').trim(), (d.boots   ||'').trim(),
+      (d.hero1   ||'').trim(), (d.hero2   ||'').trim(),
+      (d.servant1||'').trim(), (d.servant2||'').trim(),
+      (d.charms||'').trim(), (d.description||'').trim(),
+      (d.author||'Anonimo').trim(),
+      id
+    ]
+  });
+  return await getBuild(id);
+}
+
+async function adminDeleteBuild(id) {
+  if (!id) throw new Error('ID build mancante');
+  const res = await db.execute({ sql: 'DELETE FROM builds WHERE id = ?', args: [id] });
+  if (!res.rowsAffected) throw new Error('Build non trovata');
+  return { message: 'Build eliminata' };
+}
+
+async function adminSetBuildStatus(id, status) {
+  if (!['active','hidden'].includes(status)) throw new Error('Status non valido (active/hidden)');
+  const res = await db.execute({ sql: 'UPDATE builds SET status = ? WHERE id = ?', args: [status, id] });
+  if (!res.rowsAffected) throw new Error('Build non trovata');
+  return { message: `Status aggiornato: ${status}` };
+}
+
 async function voteBuild(id, type, voterKey) {
   if (!id)                           throw new Error('ID build mancante');
   if (!type)                         throw new Error('Tipo voto mancante');
@@ -1096,6 +1143,7 @@ async function listUsers({ search = '', page = 1, limit = 50 } = {}) {
 module.exports = {
   initSchema,
   listBuilds, getBuild, createBuild, voteBuild, getStats,
+  adminUpdateBuild, adminDeleteBuild, adminSetBuildStatus,
   listWeapons, getWeapon, createWeapon,
   listArmorPieces, getArmorPiece, createArmorPiece,
   listHeroes, getHero, createHero,

@@ -1937,11 +1937,12 @@
 <div class="modal-overlay" id="create-overlay" onclick="overlayClick(event,'create-overlay')">
   <div class="modal">
     <div class="modal-header">
-      <h2>⚔ Nuova Build</h2>
+      <h2 id="create-modal-title">⚔ Nuova Build</h2>
       <button class="modal-close" onclick="closeCreateModal()" aria-label="Chiudi">✕</button>
     </div>
     <div class="modal-body">
       <form id="create-form" onsubmit="submitBuild(event)">
+        <input type="hidden" id="f-edit-id" />
 
         <div class="form-section">
           <div class="section-label">Info Base</div>
@@ -2047,6 +2048,7 @@
         <div class="form-actions">
           <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Annulla</button>
           <button type="submit" class="btn btn-gold" id="submit-btn">⚔ Salva Build</button>
+          <button type="submit" class="btn btn-gold" id="submit-edit-btn" style="display:none">✏️ Aggiorna Build</button>
         </div>
       </form>
     </div>
@@ -4023,6 +4025,14 @@ function renderDetailBody(b) {
         ▼ ${b.downvotes} Non utili
       </button>
     </div>
+
+    ${Auth.user?.role === 'admin' ? `
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <span style="font-size:.75rem;color:var(--text3);align-self:center;margin-right:4px">👑 Admin:</span>
+      <button class="user-action-btn" onclick="adminEditBuild('${b.id}')">✏️ Modifica</button>
+      <button class="user-action-btn" onclick="adminToggleBuildStatus('${b.id}','${b.status}')">${b.status==='hidden'?'👁 Mostra':'🙈 Nascondi'}</button>
+      <button class="user-action-btn danger" onclick="adminRemoveBuild('${b.id}')">🗑️ Elimina</button>
+    </div>` : ''}
   `;
 }
 
@@ -4051,16 +4061,89 @@ function closeCreateModal() {
     overlay.classList.remove('open');
     document.body.style.overflow = '';
   });
+  resetForm();
 }
 
 function resetForm() {
   document.getElementById('create-form').reset();
+  document.getElementById('f-edit-id').value = '';
+  document.getElementById('create-modal-title').textContent = '⚔ Nuova Build';
+  document.getElementById('submit-btn').style.display = '';
+  document.getElementById('submit-edit-btn').style.display = 'none';
   document.getElementById('desc-counter').textContent = '0 / 1000';
+}
+
+async function adminEditBuild(id) {
+  closeDetailModal();
+  try {
+    const b = await apiGet('getBuild', { id });
+    document.getElementById('f-edit-id').value    = b.id;
+    document.getElementById('f-title').value      = b.title;
+    document.getElementById('f-mode').value       = b.mode;
+    document.getElementById('f-author').value     = b.author;
+    document.getElementById('f-weapon').value     = b.weapon;
+    document.getElementById('f-helmet').value     = b.helmet;
+    document.getElementById('f-spalle').value     = b.spalle;
+    document.getElementById('f-chest').value      = b.chest;
+    document.getElementById('f-braccia').value    = b.braccia;
+    document.getElementById('f-gloves').value     = b.gloves;
+    document.getElementById('f-boots').value      = b.boots;
+    document.getElementById('f-hero1').value      = b.hero1;
+    document.getElementById('f-hero2').value      = b.hero2;
+    document.getElementById('f-servant1').value   = b.servant1;
+    document.getElementById('f-servant2').value   = b.servant2;
+    document.getElementById('f-charms').value     = b.charms;
+    document.getElementById('f-desc').value       = b.description;
+    document.getElementById('desc-counter').textContent = `${b.description.length} / 1000`;
+    document.getElementById('create-modal-title').textContent = '✏️ Modifica Build';
+    document.getElementById('submit-btn').style.display = 'none';
+    document.getElementById('submit-edit-btn').style.display = '';
+    openCreateModal();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function adminToggleBuildStatus(id, currentStatus) {
+  const newStatus = currentStatus === 'hidden' ? 'active' : 'hidden';
+  try {
+    const res  = await fetch(`${API_BASE}/admin/builds/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    showToast(newStatus === 'hidden' ? 'Build nascosta' : 'Build visibile', 'success');
+    closeDetailModal();
+    loadBuilds();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function adminRemoveBuild(id) {
+  if (!confirm('Eliminare definitivamente questa build?')) return;
+  try {
+    const res  = await fetch(`${API_BASE}/admin/builds/${id}`, {
+      method: 'DELETE', headers: Auth.authHeader()
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    showToast('Build eliminata', 'success');
+    closeDetailModal();
+    loadBuilds();
+    loadStats();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 async function submitBuild(event) {
   event.preventDefault();
-  const btn = document.getElementById('submit-btn');
+  const editId = document.getElementById('f-edit-id').value;
+  const isEdit = Boolean(editId);
+  const btn = document.getElementById(isEdit ? 'submit-edit-btn' : 'submit-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Salvataggio...';
 
@@ -4084,17 +4167,27 @@ async function submitBuild(event) {
   };
 
   try {
-    await apiPost('createBuild', data);
-    showToast('⚔ Build forgiata con successo!', 'success');
+    if (isEdit) {
+      const res  = await fetch(`${API_BASE}/admin/builds/${editId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      showToast('Build aggiornata!', 'success');
+    } else {
+      await apiPost('createBuild', data);
+      showToast('⚔ Build forgiata con successo!', 'success');
+    }
     closeCreateModal();
-    resetForm();
     loadBuilds();
     loadStats();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '⚔ Salva Build';
+    btn.textContent = isEdit ? '✏️ Aggiorna Build' : '⚔ Salva Build';
   }
 }
 

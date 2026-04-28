@@ -309,6 +309,35 @@ app.post('/api/items/:type/:id/confirm', requireAuth, requireContributor, async 
   }
 });
 
+// ---- ADMIN — BUILDS --------------------------------------------
+
+app.patch('/api/admin/builds/:id/status', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.adminSetBuildStatus(req.params.id, req.body.status)));
+  } catch (err) {
+    console.error('[adminSetBuildStatus]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.patch('/api/admin/builds/:id', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.adminUpdateBuild(req.params.id, req.body)));
+  } catch (err) {
+    console.error('[adminUpdateBuild]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.delete('/api/admin/builds/:id', requireAdmin, async (req, res) => {
+  try {
+    res.json(ok(await db.adminDeleteBuild(req.params.id)));
+  } catch (err) {
+    console.error('[adminDeleteBuild]', err.message);
+    res.status(400).json(fail(err.message));
+  }
+});
+
 // ---- ADMIN — ITEMS ---------------------------------------------
 
 app.patch('/api/admin/items/:type/:id/status', requireAdmin, async (req, res) => {
