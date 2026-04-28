@@ -1178,9 +1178,12 @@ const TALISMAN_SEED = [
   { id:'tal-eff-aci-cat', name:'Acido - Attacchi a catena',     category:'effetto',        description:'Aggiunge probabilità di infliggere Acido con attacchi a catena',     attack_type:'catena',   effect_type:'acido'        },
   { id:'tal-eff-ust-cat', name:'Ustione - Attacchi a catena',   category:'effetto',        description:'Aggiunge probabilità di infliggere Ustione con attacchi a catena',   attack_type:'catena',   effect_type:'ustione'      },
   { id:'tal-eff-ust-lat', name:'Ustione - Attacchi laterali',   category:'effetto',        description:'Aggiunge probabilità di infliggere Ustione con attacchi laterali',   attack_type:'laterale', effect_type:'ustione'      },
+  { id:'tal-eff-vel-lat', name:'Veleno - Attacchi laterali',   category:'effetto',        description:'Aggiunge probabilità di infliggere Veleno con attacchi laterali',   attack_type:'laterale', effect_type:'veleno'       },
+  { id:'tal-eff-aci-lat', name:'Acido - Attacchi laterali',    category:'effetto',        description:'Aggiunge probabilità di infliggere Acido con attacchi laterali',    attack_type:'laterale', effect_type:'acido'        },
   // DANNO — bonus damage vs status-afflicted enemies
   { id:'tal-dan-vel-ext', name:'Danno estremo vs Veleno',       category:'danno',          description:'Aumenta il danno da attacco estremo contro nemici affetti da Veleno', attack_type:'estremo',  effect_type:'veleno'       },
   { id:'tal-dan-aci-ext', name:'Danno estremo vs Acido',        category:'danno',          description:'Aumenta il danno da attacco estremo contro nemici affetti da Acido',  attack_type:'estremo',  effect_type:'acido'        },
+  { id:'tal-dan-ust-ext', name:'Danno estremo vs Ustione',      category:'danno',          description:'Aumenta il danno da attacco estremo contro nemici affetti da Ustione', attack_type:'estremo', effect_type:'ustione'      },
   { id:'tal-dan-vel-gen', name:'Danno vs Veleno',               category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Veleno',         attack_type:'',         effect_type:'veleno'       },
   { id:'tal-dan-aci-gen', name:'Danno vs Acido',                category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Acido',          attack_type:'',         effect_type:'acido'        },
   { id:'tal-dan-ust-gen', name:'Danno vs Ustione',              category:'danno',          description:'Aumenta il danno da attacco contro nemici affetti da Ustione',        attack_type:'',         effect_type:'ustione'      },
@@ -1188,7 +1191,8 @@ const TALISMAN_SEED = [
   { id:'tal-ind-con-ext', name:'Congelamento - Attacchi estremi', category:'indebolimento', description:'Aggiunge probabilità di infliggere Congelamento con attacchi estremi', attack_type:'estremo', effect_type:'congelamento' },
   { id:'tal-ind-sto-ext', name:'Stordimento - Attacchi estremi',  category:'indebolimento', description:'Aggiunge probabilità di infliggere Stordimento con attacchi estremi',  attack_type:'estremo', effect_type:'stordimento'  },
   { id:'tal-ind-dis-ext', name:'Distrazione - Attacchi estremi',  category:'indebolimento', description:'Aggiunge probabilità di infliggere Distrazione con attacchi estremi',  attack_type:'estremo', effect_type:'distrazione'  },
-  { id:'tal-ind-deb-ext', name:'Debolezza - Attacchi estremi',    category:'indebolimento', description:'Aggiunge probabilità di infliggere Debolezza con attacchi estremi',    attack_type:'estremo', effect_type:'debolezza'    },
+  { id:'tal-ind-deb-ext', name:'Debolezza - Attacchi estremi',      category:'indebolimento', description:'Aggiunge probabilità di infliggere Debolezza con attacchi estremi',      attack_type:'estremo', effect_type:'debolezza'    },
+  { id:'tal-ind-vul-ext', name:'Vulnerabilità - Attacchi estremi', category:'indebolimento', description:'Aggiunge probabilità di infliggere Vulnerabilità con attacchi estremi', attack_type:'estremo', effect_type:'vulnerabilità' },
   // RAFFORZAMENTO — gain buffs with initial attacks
   { id:'tal-raf-rig-ini', name:'Rigenerazione - Attacchi iniziali',  category:'rafforzamento', description:'Aggiunge probabilità di ottenere Rigenerazione con attacchi iniziali',  attack_type:'iniziale', effect_type:'rigenerazione'  },
   { id:'tal-raf-con-ini', name:'Concentrazione - Attacchi iniziali', category:'rafforzamento', description:'Aggiunge probabilità di ottenere Concentrazione con attacchi iniziali', attack_type:'iniziale', effect_type:'concentrazione' },
@@ -1198,7 +1202,9 @@ const TALISMAN_SEED = [
   { id:'tal-cri-mol-ext', name:'Critico estremo - Moltiplicatore',   category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi estremi',    attack_type:'estremo',  effect_type:'' },
   { id:'tal-cri-mol-cat', name:'Critico a catena - Moltiplicatore',  category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi a catena',   attack_type:'catena',   effect_type:'' },
   { id:'tal-cri-mol-lat', name:'Critico laterale - Moltiplicatore',  category:'critico', description:'Aumenta il moltiplicatore del danno critico degli attacchi laterali',   attack_type:'laterale', effect_type:'' },
-  { id:'tal-cri-pro-lat', name:'Critico laterale - Probabilità',     category:'critico', description:'Aumenta la probabilità di danno critico degli attacchi laterali',       attack_type:'laterale', effect_type:'' },
+  { id:'tal-cri-pro-lat', name:'Critico laterale - Probabilità',  category:'critico', description:'Aumenta la probabilità di danno critico degli attacchi laterali',  attack_type:'laterale', effect_type:'' },
+  { id:'tal-cri-pro-cat', name:'Critico a catena - Probabilità',  category:'critico', description:'Aumenta la probabilità di danno critico degli attacchi a catena',  attack_type:'catena',   effect_type:'' },
+  { id:'tal-cri-pro-ext', name:'Critico estremo - Probabilità',   category:'critico', description:'Aumenta la probabilità di danno critico degli attacchi estremi',   attack_type:'estremo',  effect_type:'' },
   // DIFESA — armor and HP
   { id:'tal-dif-arm',     name:'Armatura',                      category:'difesa',     description:'Aumenta i punti armatura',                                         attack_type:'', effect_type:'' },
   { id:'tal-dif-pv',      name:'PV',                            category:'difesa',     description:'Aumenta i PV',                                                     attack_type:'', effect_type:'' },
@@ -1207,17 +1213,23 @@ const TALISMAN_SEED = [
   { id:'tal-res-dis',     name:'Resistenza Distrazione',        category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Distrazione',       attack_type:'', effect_type:'distrazione'  },
   { id:'tal-res-vul',     name:'Resistenza Vulnerabilità',      category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Vulnerabilità',     attack_type:'', effect_type:'vulnerabilità' },
   { id:'tal-res-vel',     name:'Riduzione danno Veleno',        category:'resistenza', description:'Diminuisce il danno da Veleno subito',                             attack_type:'', effect_type:'veleno'       },
-  { id:'tal-res-con',     name:'Resistenza Congelamento',       category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Congelamento',      attack_type:'', effect_type:'congelamento'  },
+  { id:'tal-res-con',     name:'Resistenza Congelamento',       category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Congelamento',  attack_type:'', effect_type:'congelamento'  },
+  { id:'tal-res-deb',     name:'Resistenza Debolezza',          category:'resistenza', description:'Aggiunge probabilità di resistere all\'effetto Debolezza',       attack_type:'', effect_type:'debolezza'     },
+  { id:'tal-res-ust',     name:'Riduzione danno Ustione',       category:'resistenza', description:'Diminuisce il danno da Ustione subito',                         attack_type:'', effect_type:'ustione'       },
+  { id:'tal-res-aci',     name:'Riduzione danno Acido',         category:'resistenza', description:'Diminuisce il danno da Acido subito',                           attack_type:'', effect_type:'acido'         },
   // STATO — strengthen active status effects
   { id:'tal-sta-pen-vul', name:'Penetrazione Vulnerabilità',    category:'stato',      description:'Riduce la resistenza dei nemici all\'effetto Vulnerabilità',       attack_type:'', effect_type:'vulnerabilità' },
   { id:'tal-sta-pen-deb', name:'Penetrazione Debolezza',        category:'stato',      description:'Riduce la resistenza dei nemici all\'effetto Debolezza',           attack_type:'', effect_type:'debolezza'    },
   { id:'tal-sta-pot-aci', name:'Potenziamento Acido',           category:'stato',      description:'Acido infligge più danno ai nemici',                               attack_type:'', effect_type:'acido'        },
-  { id:'tal-sta-pot-ust', name:'Potenziamento Ustione',         category:'stato',      description:'Ustione infligge più danno ai nemici',                             attack_type:'', effect_type:'ustione'      },
+  { id:'tal-sta-pot-ust', name:'Potenziamento Ustione',         category:'stato',      description:'Ustione infligge più danno ai nemici',        attack_type:'', effect_type:'ustione'      },
+  { id:'tal-sta-pot-vel', name:'Potenziamento Veleno',          category:'stato',      description:'Veleno infligge più danno ai nemici',          attack_type:'', effect_type:'veleno'       },
+  { id:'tal-sta-pen-dis', name:'Penetrazione Distrazione',      category:'stato',      description:'Riduce la resistenza dei nemici all\'effetto Distrazione', attack_type:'', effect_type:'distrazione'  },
   // EROI — hero power bonuses by class
   { id:'tal-ero-alc',     name:'Eroi alchimisti - Poteri',      category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi alchimisti', attack_type:'', effect_type:'' },
   { id:'tal-ero-mag',     name:'Eroi maghi - Poteri',           category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi maghi',      attack_type:'', effect_type:'' },
   { id:'tal-ero-cac',     name:'Eroi cacciatori - Poteri',      category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi cacciatori', attack_type:'', effect_type:'' },
   { id:'tal-ero-gue',     name:'Eroi guerrieri - Poteri',       category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi guerrieri',  attack_type:'', effect_type:'' },
+  { id:'tal-ero-fur',     name:'Eroi furfanti - Poteri',        category:'eroi',       description:'Aumenta il danno o la guarigione dei poteri degli Eroi furfanti',   attack_type:'', effect_type:'' },
   // SERVITORI — servant bonuses
   { id:'tal-ser-gua',     name:'Guarigione poteri servitori',   category:'servitori',  description:'I poteri di tutti i servitori conferiscono più guarigione',         attack_type:'', effect_type:'' },
   { id:'tal-ser-dan-pod', name:'Danno poteri servitori',        category:'servitori',  description:'I poteri di tutti i servitori infliggono più danno',                attack_type:'', effect_type:'' },
@@ -1226,9 +1238,6 @@ const TALISMAN_SEED = [
 ];
 
 async function seedTalismans() {
-  const count = await db.execute({ sql: 'SELECT COUNT(*) as cnt FROM talismans', args: [] });
-  if (Number(count.rows[0].cnt) > 0) return;
-
   const ts = new Date().toISOString();
   const batch = TALISMAN_SEED.map(t => ({
     sql: `INSERT OR IGNORE INTO talismans
