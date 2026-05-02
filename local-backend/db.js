@@ -31,8 +31,9 @@ async function initSchema() {
         author      TEXT NOT NULL DEFAULT 'Anonimo',
         upvotes     INTEGER NOT NULL DEFAULT 0,
         downvotes   INTEGER NOT NULL DEFAULT 0,
-        status      TEXT NOT NULL DEFAULT 'active',
-        owner_id    TEXT NOT NULL DEFAULT ''
+        status               TEXT NOT NULL DEFAULT 'active',
+        owner_id             TEXT NOT NULL DEFAULT '',
+        equipment_talismans  TEXT NOT NULL DEFAULT '{}'
       )`,
       args: []
     },
@@ -243,7 +244,9 @@ async function initSchema() {
     `ALTER TABLE heroes   ADD COLUMN potere1_desc  TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE heroes   ADD COLUMN potere2_desc  TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE users    ADD COLUMN email         TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE builds   ADD COLUMN owner_id      TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN owner_id             TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE builds   ADD COLUMN equipment_talismans  TEXT NOT NULL DEFAULT '{}'`,
+    `ALTER TABLE users    ADD COLUMN biblioteca_json       TEXT NOT NULL DEFAULT '{}'`,
   ];
   for (const sql of migrations) {
     try { await db.execute({ sql, args: [] }); } catch (_) { /* column already exists */ }
@@ -315,8 +318,8 @@ async function createBuild(d) {
 
   await db.execute({
     sql: `INSERT INTO builds
-          (id,timestamp,title,mode,weapon,helmet,spalle,chest,braccia,gloves,boots,hero1,hero2,servant1,servant2,charms,description,author,upvotes,downvotes,status,owner_id)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active',?)`,
+          (id,timestamp,title,mode,weapon,helmet,spalle,chest,braccia,gloves,boots,hero1,hero2,servant1,servant2,charms,description,author,upvotes,downvotes,status,owner_id,equipment_talismans)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,'active',?,?)`,
     args: [
       id, ts, title, mode, weapon,
       (d.helmet  ||'').trim(), (d.spalle  ||'').trim(),
@@ -325,7 +328,8 @@ async function createBuild(d) {
       (d.hero1   ||'').trim(), (d.hero2   ||'').trim(),
       (d.servant1||'').trim(), (d.servant2||'').trim(),
       (d.charms||'').trim(), (d.description||'').trim(), author,
-      (d.owner_id||'').trim()
+      (d.owner_id||'').trim(),
+      (d.equipment_talismans && typeof d.equipment_talismans === 'string' ? d.equipment_talismans : JSON.stringify(d.equipment_talismans || {}))
     ]
   });
 
@@ -349,7 +353,7 @@ async function adminUpdateBuild(id, d) {
 
   await db.execute({
     sql: `UPDATE builds SET title=?,mode=?,weapon=?,helmet=?,spalle=?,chest=?,braccia=?,gloves=?,boots=?,
-          hero1=?,hero2=?,servant1=?,servant2=?,charms=?,description=?,author=? WHERE id=?`,
+          hero1=?,hero2=?,servant1=?,servant2=?,charms=?,description=?,author=?,equipment_talismans=? WHERE id=?`,
     args: [
       title, mode, weapon,
       (d.helmet  ||'').trim(), (d.spalle  ||'').trim(),
@@ -359,6 +363,7 @@ async function adminUpdateBuild(id, d) {
       (d.servant1||'').trim(), (d.servant2||'').trim(),
       (d.charms||'').trim(), (d.description||'').trim(),
       (d.author||'Anonimo').trim(),
+      (d.equipment_talismans && typeof d.equipment_talismans === 'string' ? d.equipment_talismans : JSON.stringify(d.equipment_talismans || {})),
       id
     ]
   });
@@ -455,8 +460,9 @@ function rowToObj(row) {
     author:      s('author') || 'Anonimo',
     upvotes:     n('upvotes'),
     downvotes:   n('downvotes'),
-    status:      s('status') || 'active',
-    owner_id:    s('owner_id'),
+    status:              s('status') || 'active',
+    owner_id:            s('owner_id'),
+    equipment_talismans: s('equipment_talismans') || '{}',
   };
 }
 
@@ -994,15 +1000,16 @@ async function createArmorPiece(d) {
 
 function userToObj(row) {
   return {
-    id:          String(row.id),
-    gamertag:    String(row.gamertag),
-    provider:    String(row.provider),
-    provider_id: String(row.provider_id || ''),
-    avatar_url:  String(row.avatar_url  || ''),
-    email:       String(row.email       || ''),
-    role:        String(row.role        || 'user'),
-    contributor: Number(row.contributor || 0),
-    created_at:  String(row.created_at  || ''),
+    id:              String(row.id),
+    gamertag:        String(row.gamertag),
+    provider:        String(row.provider),
+    provider_id:     String(row.provider_id     || ''),
+    avatar_url:      String(row.avatar_url       || ''),
+    email:           String(row.email            || ''),
+    role:            String(row.role             || 'user'),
+    contributor:     Number(row.contributor      || 0),
+    created_at:      String(row.created_at       || ''),
+    biblioteca_json: String(row.biblioteca_json  || '{}'),
   };
 }
 
@@ -1061,6 +1068,13 @@ async function setContributor(userId, value) {
   if (!res.rowsAffected) throw new Error('Utente non trovato');
   const u = await getUserById(userId);
   return u;
+}
+
+async function updateBiblioteca(userId, data) {
+  const json = typeof data === 'string' ? data : JSON.stringify(data);
+  const res = await db.execute({ sql: 'UPDATE users SET biblioteca_json = ? WHERE id = ?', args: [json, userId] });
+  if (!res.rowsAffected) throw new Error('Utente non trovato');
+  return await getUserById(userId);
 }
 
 const VALID_ROLES = ['user', 'mod', 'admin'];
@@ -1358,6 +1372,6 @@ module.exports = {
   listGloves, getGlove, createGlove,
   listTalismans, getTalisman, createTalisman, adminUpdateTalisman,
   confirmItem, adminSetStatus, adminUpdateItem,
-  upsertUser, getUserById, updateGamertag, setContributor, updateUserRole, listUsers,
+  upsertUser, getUserById, updateGamertag, setContributor, updateBiblioteca, updateUserRole, listUsers,
   updateUserDetails, deleteUser, listBannedAccounts, unbanAccount,
 };

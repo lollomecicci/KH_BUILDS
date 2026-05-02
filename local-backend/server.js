@@ -275,11 +275,12 @@ app.get('/api/me', requireAuth, async (req, res) => {
     const user = await db.getUserById(req.user.userId);
     if (!user) return res.status(404).json(fail('Utente non trovato'));
     res.json(ok({
-      userId:      user.id,
-      gamertag:    user.gamertag,
-      avatar:      user.avatar_url,
-      role:        user.role,
-      contributor: user.contributor,
+      userId:         user.id,
+      gamertag:       user.gamertag,
+      avatar:         user.avatar_url,
+      role:           user.role,
+      contributor:    user.contributor,
+      biblioteca_json: user.biblioteca_json,
     }));
   } catch (err) {
     res.status(500).json(fail(err.message));
@@ -291,6 +292,15 @@ app.patch('/api/me/gamertag', requireAuth, async (req, res) => {
     const user  = await db.updateGamertag(req.user.userId, req.body.gamertag);
     const token = signToken(user);
     res.json(ok({ gamertag: user.gamertag, token }));
+  } catch (err) {
+    res.status(400).json(fail(err.message));
+  }
+});
+
+app.patch('/api/me/biblioteca', requireAuth, async (req, res) => {
+  try {
+    await db.updateBiblioteca(req.user.userId, req.body.biblioteca || {});
+    res.json(ok({ saved: true }));
   } catch (err) {
     res.status(400).json(fail(err.message));
   }

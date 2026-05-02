@@ -886,6 +886,42 @@
     .slot-label { color: var(--text3); font-size: .72rem; display: block; margin-bottom: 1px; letter-spacing: .04em; }
     .slot-val   { color: var(--text); font-weight: 600; }
 
+    /* Talisman chips in detail view */
+    .talisman-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+    .talisman-chip  { font-size: .68rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; color: var(--text2); }
+    .talisman-chip.tier-unico       { border-color: var(--gold-d);  color: var(--gold); }
+    .talisman-chip.tier-leggendario { border-color: #7c5ce4;        color: #b59bf8; }
+    .talisman-chip.tier-epico       { border-color: #2d7a4f;        color: #68c190; }
+    .talisman-chip.tier-raro        { border-color: #2a5fa5;        color: #63a8ee; }
+
+    /* Talisman picker in build form */
+    .talisman-pieces { display: flex; flex-direction: column; gap: 10px; }
+    .talisman-piece-header { font-size: .74rem; color: var(--text2); font-weight: 600; margin-bottom: 4px; letter-spacing: .03em; }
+    .talisman-slot  { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+    .talisman-slot select { flex: 1; min-width: 0; font-size: .75rem; padding: 4px 5px; }
+    .talisman-slot .talisman-type-sel { flex: 2; }
+    .talisman-remove-btn { flex: none; width: 26px; height: 26px; padding: 0; background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: 4px; cursor: pointer; font-size: .8rem; transition: var(--transition); }
+    .talisman-remove-btn:hover { border-color: var(--error); color: var(--error); }
+    .talisman-add-btn { font-size: .72rem; color: var(--gold); background: transparent; border: 1px dashed var(--gold-d); padding: 3px 10px; border-radius: 4px; cursor: pointer; transition: var(--transition); }
+    .talisman-add-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-bg); }
+    .talisman-add-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* Biblioteca della Sapienza */
+    .biblioteca-table { width: 100%; border-collapse: collapse; font-size: .76rem; margin-bottom: 10px; }
+    .biblioteca-table th { color: var(--text3); padding: 4px 6px; text-align: center; font-weight: 600; font-size: .7rem; }
+    .biblioteca-table td { padding: 3px 4px; }
+    .biblioteca-table td:first-child { color: var(--text2); white-space: nowrap; padding-right: 8px; }
+    .biblioteca-input { width: 44px; text-align: center; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 3px 2px; font-size: .78rem; }
+    .biblioteca-input:focus { outline: none; border-color: var(--gold-d); }
+    .bib-preview { margin-top: 8px; padding: 8px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; font-size: .78rem; display: none; }
+    .bib-preview.visible { display: block; }
+    .bib-hero-row { margin-bottom: 4px; color: var(--text2); }
+    .bib-hero-row strong { color: var(--text); }
+    .bib-stat { display: inline-block; margin-right: 10px; }
+    .bib-stat.danni   { color: #f87171; }
+    .bib-stat.guarig  { color: #4ade80; }
+    .bib-stat.critico { color: #facc15; }
+
     .heroes-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .hero-chip {
       background: rgba(10,10,22,.7);
@@ -2006,15 +2042,22 @@
         </div>
 
         <div class="form-section">
+          <div class="section-label">🔮 Talismani Equipaggiamento</div>
+          <div id="f-talismans-container">
+            <div style="color:var(--text3);font-size:.8rem">Caricamento talismani…</div>
+          </div>
+        </div>
+
+        <div class="form-section">
           <div class="section-label">👥 Compagnia</div>
           <div class="form-grid">
             <div class="form-group">
               <label>Eroe 1</label>
-              <input type="text" id="f-hero1" class="form-input" placeholder="Nome eroe" maxlength="50" />
+              <input type="text" id="f-hero1" class="form-input" placeholder="Nome eroe" maxlength="50" oninput="scheduleBibPreview()" />
             </div>
             <div class="form-group">
               <label>Eroe 2</label>
-              <input type="text" id="f-hero2" class="form-input" placeholder="Nome eroe" maxlength="50" />
+              <input type="text" id="f-hero2" class="form-input" placeholder="Nome eroe" maxlength="50" oninput="scheduleBibPreview()" />
             </div>
             <div class="form-group">
               <label>Servitore 1</label>
@@ -2026,6 +2069,8 @@
             </div>
           </div>
         </div>
+
+        <div id="bib-form-preview" class="bib-preview" style="margin:0 0 10px"></div>
 
         <div class="form-section">
           <div class="section-label">✨ Charm e Note</div>
@@ -2588,7 +2633,7 @@ function loginWith(provider) {
   window.location.href = `${IS_LOCAL ? 'http://localhost:3000' : ''}/auth/${provider}`;
 }
 
-function openProfileModal() {
+async function openProfileModal() {
   const body = document.getElementById('profile-body');
   const u    = Auth.user;
   if (!u) return;
@@ -2597,6 +2642,20 @@ function openProfileModal() {
   const contribLabel = u.contributor
     ? `<span class="contributor-badge">✓ Contributore</span>`
     : `<span style="font-size:.78rem;color:var(--text3)">Non contributore</span>`;
+
+  // fetch fresh biblioteca data
+  let bibData = getBiblioteca();
+  try {
+    const r = await fetch(`${API_BASE}/me`, { headers: Auth.authHeader() });
+    const j = await r.json();
+    if (j.ok && j.data.biblioteca_json) {
+      const remote = JSON.parse(j.data.biblioteca_json || '{}');
+      if (Object.keys(remote).length) {
+        bibData = remote;
+        localStorage.setItem('kh_biblioteca', JSON.stringify(bibData));
+      }
+    }
+  } catch(_) {}
 
   body.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
@@ -2627,7 +2686,8 @@ function openProfileModal() {
           <span>Attiva per poter aggiungere e verificare elementi nel database del gioco.</span>
         </div>
       </label>
-      <button class="btn btn-outline" onclick="Auth.logout();closeModal('profile-overlay')">
+      ${renderBibliotecaTable(bibData)}
+      <button class="btn btn-outline" onclick="Auth.logout();closeModal('profile-overlay')" style="margin-top:10px">
         Disconnetti
       </button>
     </div>`;
@@ -3958,12 +4018,26 @@ function renderDetailBody(b) {
   const heroes   = [b.hero1, b.hero2].filter(Boolean);
   const servants = [b.servant1, b.servant2].filter(Boolean);
 
-  const slot = (icon, label, val) => `
+  const talData = (() => { try { return JSON.parse(b.equipment_talismans || '{}'); } catch(_) { return {}; } })();
+  const talChips = (key) => {
+    const slots = talData[key] || [];
+    if (!slots.length) return '';
+    const chips = slots.map(s => {
+      const tal = (window.TALISMANS||[]).find(t => t.id === s.id);
+      const name = tal ? tal.name : s.id;
+      const tier = s.tier || '';
+      return `<span class="talisman-chip${tier?' tier-'+tier:''}">${name}${tier?' ('+tier+')':''}</span>`;
+    }).join('');
+    return `<div class="talisman-chips">${chips}</div>`;
+  };
+
+  const slot = (icon, label, val, key) => `
     <div class="equip-slot ${val ? '' : 'empty'}">
       <span class="slot-icon">${icon}</span>
       <div>
         <span class="slot-label">${label}</span>
         <span class="slot-val">${val || 'Non specificato'}</span>
+        ${key ? talChips(key) : ''}
       </div>
     </div>`;
 
@@ -3983,13 +4057,13 @@ function renderDetailBody(b) {
     <div class="detail-section">
       <div class="section-label">⚔ Equipaggiamento</div>
       <div class="equip-grid">
-        ${slot('⚔','Arma',    b.weapon)}
-        ${slot('🪖','Elmo',    b.helmet)}
-        ${slot('🦺','Spalle',  b.spalle)}
-        ${slot('🛡','Busto',   b.chest)}
-        ${slot('💪','Braccia', b.braccia)}
-        ${slot('🧤','Guanti',  b.gloves)}
-        ${slot('🦵','Gambe',   b.boots)}
+        ${slot('⚔','Arma',    b.weapon,  'weapon')}
+        ${slot('🪖','Elmo',    b.helmet,  'helmet')}
+        ${slot('🦺','Spalle',  b.spalle,  'spalle')}
+        ${slot('🛡','Busto',   b.chest,   'chest')}
+        ${slot('💪','Braccia', b.braccia, 'braccia')}
+        ${slot('🧤','Guanti',  b.gloves,  'gloves')}
+        ${slot('🦵','Gambe',   b.boots,   'boots')}
       </div>
     </div>
 
@@ -4076,6 +4150,7 @@ function resetForm() {
   document.getElementById('submit-btn').style.display = '';
   document.getElementById('submit-edit-btn').style.display = 'none';
   document.getElementById('desc-counter').textContent = '0 / 1000';
+  setTalismanData({});
 }
 
 async function adminEditBuild(id) {
@@ -4104,6 +4179,7 @@ async function adminEditBuild(id) {
     document.getElementById('create-modal-title').textContent = '✏️ Modifica Build';
     document.getElementById('submit-btn').style.display = 'none';
     document.getElementById('submit-edit-btn').style.display = '';
+    setTalismanData(JSON.parse(b.equipment_talismans || '{}'));
     openCreateModal();
   } catch (err) {
     showToast(err.message, 'error');
@@ -4169,7 +4245,8 @@ async function submitBuild(event) {
     servant1:    document.getElementById('f-servant1').value.trim(),
     servant2:    document.getElementById('f-servant2').value.trim(),
     charms:      document.getElementById('f-charms').value.trim(),
-    description: document.getElementById('f-desc').value.trim()
+    description: document.getElementById('f-desc').value.trim(),
+    equipment_talismans: JSON.stringify(getTalismanData())
   };
 
   try {
@@ -4194,6 +4271,252 @@ async function submitBuild(event) {
   } finally {
     btn.disabled = false;
     btn.textContent = isEdit ? '✏️ Aggiorna Build' : '⚔ Salva Build';
+  }
+}
+
+// ============================================================
+// BIBLIOTECA DELLA SAPIENZA
+// ============================================================
+const BIBLIOTECA_ENEMIES = [
+  { key: 'bestia',     label: 'Bestia'     },
+  { key: 'demone',     label: 'Demone'     },
+  { key: 'cultista',   label: 'Cultista'   },
+  { key: 'goblin',     label: 'Goblin'     },
+  { key: 'fuorilegge', label: 'Fuorilegge' },
+  { key: 'miliziano',  label: 'Miliziano'  },
+  { key: 'golem',      label: 'Golem'      },
+  { key: 'troll',      label: 'Troll'      },
+  { key: 'non_morto',  label: 'Non morto'  },
+];
+// strong_vs text from hero DB → biblioteca key
+const STRONG_VS_MAP = {
+  'bestia':     'bestia',
+  'demone':     'demone',
+  'cultista':   'cultista',
+  'goblin':     'goblin',
+  'fuorilegge': 'fuorilegge',
+  'miliziano':  'miliziano',
+  'golem':      'golem',
+  'troll':      'troll',
+  'non morto':  'non_morto',
+  'non-morto':  'non_morto',
+};
+// Danni/Guarigione: lv × 3% | Critico: lv × 1%
+function bibBonus(stat, level) {
+  const lv = Math.max(0, Math.min(15, Number(level) || 0));
+  return stat === 'critico' ? lv : lv * 3;
+}
+
+function getBiblioteca() {
+  try { return JSON.parse(localStorage.getItem('kh_biblioteca') || '{}'); } catch(_) { return {}; }
+}
+
+function renderBibliotecaTable(data) {
+  const rows = BIBLIOTECA_ENEMIES.map(e => {
+    const vals = data[e.key] || {};
+    return `<tr>
+      <td>${e.label}</td>
+      ${['danni','guarigione','critico'].map(s =>
+        `<td style="text-align:center"><input type="number" class="biblioteca-input"
+          id="bib-${e.key}-${s}" min="0" max="15"
+          value="${Math.max(0,Math.min(15,Number(vals[s])||0))}" /></td>`
+      ).join('')}
+    </tr>`;
+  }).join('');
+  return `
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:12px">
+      <div style="font-family:'Cinzel',serif;font-size:.82rem;color:var(--text2);margin-bottom:6px">📚 Biblioteca della Sapienza</div>
+      <div style="font-size:.71rem;color:var(--text3);margin-bottom:10px">Livelli bonus attuali per tipo di nemico (0–15).</div>
+      <table class="biblioteca-table">
+        <thead><tr><th></th><th title="Danni">⚔</th><th title="Guarigione">♥</th><th title="Critico">👁</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <button type="button" class="btn btn-gold btn-sm" onclick="saveBiblioteca()" style="width:100%">💾 Salva Biblioteca</button>
+    </div>`;
+}
+
+async function saveBiblioteca() {
+  const bib = {};
+  for (const e of BIBLIOTECA_ENEMIES) {
+    bib[e.key] = {};
+    for (const s of ['danni','guarigione','critico']) {
+      const el = document.getElementById(`bib-${e.key}-${s}`);
+      bib[e.key][s] = el ? Math.max(0, Math.min(15, Number(el.value) || 0)) : 0;
+    }
+  }
+  try {
+    const res  = await fetch(`${API_BASE}/me/biblioteca`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeader() },
+      body: JSON.stringify({ biblioteca: bib })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    localStorage.setItem('kh_biblioteca', JSON.stringify(bib));
+    showToast('📚 Biblioteca salvata!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+let _bibPreviewTimer = null;
+function scheduleBibPreview() {
+  clearTimeout(_bibPreviewTimer);
+  _bibPreviewTimer = setTimeout(updateBibPreview, 400);
+}
+
+async function updateBibPreview() {
+  const preview = document.getElementById('bib-form-preview');
+  if (!preview) return;
+
+  const bib = getBiblioteca();
+  const names = [
+    document.getElementById('f-hero1')?.value.trim(),
+    document.getElementById('f-hero2')?.value.trim(),
+  ].filter(Boolean);
+
+  if (!names.length || !Object.keys(bib).length) {
+    preview.classList.remove('visible');
+    preview.innerHTML = '';
+    return;
+  }
+
+  const lines = [];
+  for (const name of names) {
+    // look up hero in local cache or skip
+    const hero = (window.HEROES_CACHE || []).find(h => h.name.toLowerCase() === name.toLowerCase());
+    if (!hero?.strong_vs) continue;
+    const key = STRONG_VS_MAP[hero.strong_vs.toLowerCase()];
+    if (!key || !bib[key]) continue;
+    const d = bibBonus('danni',      bib[key].danni      || 0);
+    const g = bibBonus('guarigione', bib[key].guarigione || 0);
+    const c = bibBonus('critico',    bib[key].critico    || 0);
+    if (!d && !g && !c) continue;
+    const eLabel = BIBLIOTECA_ENEMIES.find(e => e.key === key)?.label || key;
+    lines.push(`<div class="bib-hero-row">
+      <strong>${hero.name}</strong> <span style="color:var(--text3);font-size:.7rem">(forte vs ${eLabel})</span>
+      ${d ? `<span class="bib-stat danni">⚔ +${d}%</span>` : ''}
+      ${g ? `<span class="bib-stat guarig">♥ +${g}%</span>` : ''}
+      ${c ? `<span class="bib-stat critico">👁 +${c}%</span>` : ''}
+    </div>`);
+  }
+
+  if (lines.length) {
+    preview.innerHTML = '<div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">📚 Bonus Biblioteca attivi</div>' + lines.join('');
+    preview.classList.add('visible');
+  } else {
+    preview.classList.remove('visible');
+    preview.innerHTML = '';
+  }
+}
+
+async function loadHeroesCache() {
+  try {
+    const res = await fetch(`${API_BASE}/heroes?status=verified`);
+    const j   = await res.json();
+    window.HEROES_CACHE = j.ok ? (Array.isArray(j.data) ? j.data : []) : [];
+  } catch(_) { window.HEROES_CACHE = []; }
+}
+
+// ============================================================
+// TALISMAN PICKER
+// ============================================================
+const EQUIP_PIECES = [
+  { key:'weapon',  icon:'⚔',  label:'Arma'    },
+  { key:'helmet',  icon:'🪖', label:'Elmo'    },
+  { key:'spalle',  icon:'🦺', label:'Spalle'  },
+  { key:'chest',   icon:'🛡', label:'Busto'   },
+  { key:'braccia', icon:'💪', label:'Braccia' },
+  { key:'gloves',  icon:'🧤', label:'Guanti'  },
+  { key:'boots',   icon:'🦵', label:'Gambe'   },
+];
+const TALISMAN_TIERS = ['comune','raro','epico','leggendario','unico'];
+const TALISMAN_CATS  = ['effetto','danno','indebolimento','rafforzamento','critico','difesa','resistenza','stato','eroi','servitori'];
+
+async function loadTalismans() {
+  try {
+    const res = await fetch(`${API_BASE}/talismans`);
+    const j = await res.json();
+    window.TALISMANS = j.ok ? j.data : [];
+  } catch (_) { window.TALISMANS = []; }
+  initTalismanPicker();
+}
+
+function initTalismanPicker() {
+  const container = document.getElementById('f-talismans-container');
+  if (!container) return;
+  container.innerHTML = '<div class="talisman-pieces">' + EQUIP_PIECES.map(p => `
+    <div class="talisman-piece">
+      <div class="talisman-piece-header">${p.icon} ${p.label}</div>
+      <div class="talisman-slots" id="tslots-${p.key}"></div>
+      <button type="button" class="talisman-add-btn" id="tsbtn-${p.key}"
+              onclick="addTalismanSlot('${p.key}')">+ Aggiungi talismano</button>
+    </div>`).join('') + '</div>';
+}
+
+function addTalismanSlot(piece, existing) {
+  const container = document.getElementById(`tslots-${piece}`);
+  if (!container) return;
+  if (container.querySelectorAll('.talisman-slot').length >= 3) return;
+  const existingTal = existing?.id ? (window.TALISMANS||[]).find(t => t.id === existing.id) : null;
+  const initCat = existingTal?.category || '';
+  const catOpts = ['<option value="">Categoria…</option>',
+    ...TALISMAN_CATS.map(c => `<option value="${c}"${c===initCat?' selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`)
+  ].join('');
+  const filtered = initCat ? (window.TALISMANS||[]).filter(t => t.category === initCat) : [];
+  const typeOpts = [`<option value="">${initCat?'Talismano…':'— scegli categoria —'}</option>`,
+    ...filtered.map(t => `<option value="${t.id}"${t.id===existing?.id?' selected':''}>${t.name}</option>`)
+  ].join('');
+  const tierOpts = ['<option value="">Tier…</option>',
+    ...TALISMAN_TIERS.map(t => `<option value="${t}"${t===existing?.tier?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`)
+  ].join('');
+  const div = document.createElement('div');
+  div.className = 'talisman-slot';
+  div.innerHTML = `
+    <select class="talisman-cat-sel form-input" onchange="onTalismanCatChange(this)">${catOpts}</select>
+    <select class="talisman-type-sel form-input">${typeOpts}</select>
+    <select class="talisman-tier-sel form-input">${tierOpts}</select>
+    <button type="button" class="talisman-remove-btn" onclick="this.closest('.talisman-slot').remove();updateAddBtnState('${piece}')">✕</button>`;
+  container.appendChild(div);
+  updateAddBtnState(piece);
+}
+
+function onTalismanCatChange(catSel) {
+  const slot = catSel.closest('.talisman-slot');
+  const typeSel = slot.querySelector('.talisman-type-sel');
+  const cat = catSel.value;
+  const filtered = cat ? (window.TALISMANS||[]).filter(t => t.category === cat) : [];
+  typeSel.innerHTML = `<option value="">${cat?'Talismano…':'— scegli categoria —'}</option>` +
+    filtered.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+}
+
+function updateAddBtnState(piece) {
+  const btn = document.getElementById(`tsbtn-${piece}`);
+  if (btn) btn.disabled = document.querySelectorAll(`#tslots-${piece} .talisman-slot`).length >= 3;
+}
+
+function getTalismanData() {
+  const result = {};
+  for (const p of EQUIP_PIECES) {
+    result[p.key] = [];
+    const container = document.getElementById(`tslots-${p.key}`);
+    if (!container) continue;
+    for (const slot of container.querySelectorAll('.talisman-slot')) {
+      const id   = slot.querySelector('.talisman-type-sel')?.value;
+      const tier = slot.querySelector('.talisman-tier-sel')?.value;
+      if (id) result[p.key].push({ id, tier: tier || '' });
+    }
+  }
+  return result;
+}
+
+function setTalismanData(data) {
+  for (const p of EQUIP_PIECES) {
+    const container = document.getElementById(`tslots-${p.key}`);
+    if (!container) continue;
+    container.innerHTML = '';
+    for (const slot of (data?.[p.key] || [])) addTalismanSlot(p.key, slot);
+    updateAddBtnState(p.key);
   }
 }
 
@@ -4289,6 +4612,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   loadBuilds();
   loadStats();
+  loadTalismans();
+  loadHeroesCache();
 });
 </script>
 

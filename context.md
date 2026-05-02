@@ -3,7 +3,7 @@
 ## Cos'è
 Web app per condividere, consultare e votare build del gioco **Knighthood**.
 SPA vanilla JS su `index.html`, backend Express + SQLite, deploy su Fly.io.
-Community-driven: gli utenti registrati possono contribuire al database di armi, armature, eroi, servitori e guanti.
+Community-driven: gli utenti registrati possono contribuire al database di armi, armature, eroi, servitori, guanti e talismani.
 
 ---
 
@@ -196,6 +196,10 @@ UNIQUE `(provider, provider_id)`. `upsertUser()` controlla questa tabella prima 
 | upvotes | INTEGER | default 0 |
 | downvotes | INTEGER | default 0 |
 | status | TEXT | `active` / `hidden` |
+| owner_id | TEXT | `userId` JWT al momento della creazione ('' se anonimo) |
+| equipment_talismans | TEXT | JSON `{ weapon:[{id,tier},...], helmet:[...], ... }` |
+
+**Owner edit**: `PATCH /api/builds/:id` (requireAuth) — owner o admin possono modificare la propria build. Owner non può cambiare il campo `author`.
 
 ### Tabella `weapons`
 
@@ -274,6 +278,26 @@ UNIQUE `(provider, provider_id)`. `upsertUser()` controlla questa tabella prima 
 | capture_glove | TEXT | es. "Guanto del ribelle" |
 | status / submitted_by / confirmations / flags / timestamp | | standard |
 
+### Tabella `talismans`
+
+| Colonna | Tipo | Note |
+|---------|------|------|
+| id | TEXT PK | Slug descrittivo es. `tal-eff-vel-cat` |
+| name | TEXT | Nome leggibile es. "Veleno categoria" |
+| category | TEXT | Vedi categorie sotto |
+| description | TEXT | Effetto testuale |
+| attack_type | TEXT | Tipo attacco (se applicabile) |
+| effect_type | TEXT | Tipo effetto (se applicabile) |
+| val_comune / val_raro / val_epico / val_leggendario / val_unico | REAL | Valori numerici (nullable, da popolare) |
+| status | TEXT | `pending` / `verified` — default `pending` |
+| timestamp | TEXT | ISO 8601 |
+
+**Categorie**: `effetto` | `danno` | `indebolimento` | `rafforzamento` | `critico` | `difesa` | `resistenza` | `stato` | `eroi` | `servitori`
+
+**52 talismani pre-caricati** via `seedTalismans()` (INSERT OR IGNORE, eseguito ad ogni avvio). Valori numerici (`val_*`) da popolare tier per tier in seguito.
+
+**Classi eroi** per categoria `eroi`: Alchimista, Mago, Cacciatore, Guerriero, Furfante.
+
 ### Tabella `votes`
 PK `(build_id, voter_key)`.
 
@@ -297,6 +321,7 @@ requireAuth(req,res,next)         // Bearer JWT valido
 requireContributor(req,res,next)  // contributor=1 OR role mod/admin
 requireModOrAdmin(req,res,next)   // role mod OR admin (JWT only)
 requireAdmin(req,res,next)        // role='admin' OR X-Admin-Token header
+parseToken(req)                   // Soft parse — ritorna user o null (no 401)
 ```
 
 ### Frontend Auth object
@@ -342,7 +367,8 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 | PATCH | `/api/me/contributor` | Bearer | Ritorna nuovo token |
 | GET | `/api/builds` | — | mode, sort, search, page, limit |
 | GET | `/api/builds/:id` | — | |
-| POST | `/api/builds` | — | |
+| POST | `/api/builds` | — (owner_id opzionale da JWT) | Crea build; salva owner_id se autenticato |
+| PATCH | `/api/builds/:id` | Bearer (owner o admin) | Modifica build propria; owner non può cambiare `author` |
 | POST | `/api/builds/:id/vote` | — | `{ type, voterKey }` |
 | GET | `/api/stats` | — | |
 | GET | `/api/weapons` | — | rarity, weapon_type, status, search |
@@ -355,9 +381,14 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 | POST | `/api/servants` | Contributor | → pending |
 | GET | `/api/gloves` | — | rarity, status, search |
 | POST | `/api/gloves` | Contributor | → pending |
+| GET | `/api/talismans` | — | category, status, search |
+| GET | `/api/talismans/:id` | — | |
+| POST | `/api/talismans` | Contributor | → pending |
+| PATCH | `/api/admin/talismans/:id` | Admin | Aggiorna valori numerici tier |
 | POST | `/api/items/:type/:id/confirm` | Contributor | `{ action }` |
 | PATCH | `/api/admin/items/:type/:id/status` | Admin | |
 | PATCH | `/api/admin/items/:type/:id` | Admin | Modifica campi item |
+| PATCH | `/api/admin/builds/:id/status` | Admin | `{ status }` |
 | GET | `/api/admin/users` | Mod/Admin | search, page |
 | PATCH | `/api/admin/users/:id` | Mod/Admin | `{ gamertag, contributor, role? }` — gerarchia ruoli |
 | DELETE | `/api/admin/users/:id` | Admin | `{ ban?: { reason, banned_by } }` — ban opzionale |
@@ -374,6 +405,16 @@ canContribute()      // Auth.user?.contributor || role mod/admin
 - Stats bar, filter bar (mode tabs + sort + search), builds grid, paginazione
 - FAB "＋ Nuova Build"
 - Modal: `#create-overlay` (form build), `#detail-overlay` (dettaglio + voto)
+
+### Form build (`#create-overlay`)
+Sezioni:
+1. Titolo + Modalità + Autore
+2. Equipaggiamento (weapon, helmet, spalle, chest, braccia, gloves, boots)
+3. **🔮 Talismani Equipaggiamento** — per ogni pezzo: fino a 3 slot, ciascuno con dropdown categoria → dropdown talismano (filtrato) → dropdown tier
+4. Compagnia (hero1, hero2, servant1, servant2)
+5. Charm + Descrizione strategia
+
+**Owner edit**: build inserita da utente autenticato mostra "✏️ La tua build" nel detail modal. `adminEditBuild()` usato sia da admin che da owner; `f-author` in readOnly se non admin.
 
 ### Sezione 📚 Database
 - Type tabs: Armi / Armature / Eroi / Servitori / Guanti
@@ -394,14 +435,20 @@ Visibile a `mod` e `admin`. Tab interni:
   - Rank: user=0, mod=1, admin=2
 - **🚫 Bannati** (solo admin): lista account bannati con gamertag, provider, email, motivo, chi ha bannato; pulsante Sblocca
 
+### Detail modal (`#detail-overlay`)
+- Equipaggiamento con chip talismani inline per ogni slot (tier-colorati)
+- Voto up/down
+- Admin: pulsanti Modifica + Nascondi/Mostra
+- Owner (non admin): pulsante "✏️ La tua build: Modifica"
+
 ### Modali globali
 | ID | Contenuto |
 |----|-----------|
 | `#onboarding-overlay` | Primo accesso: gamertag + checkbox contributor |
 | `#login-overlay` | Scelta provider OAuth (Discord / Google) |
 | `#profile-overlay` | Profilo: gamertag edit, toggle contributor, badge ruolo, logout |
-| `#create-overlay` | Form nuova build |
-| `#detail-overlay` | Dettaglio build + voto |
+| `#create-overlay` | Form nuova build (con talisman picker) |
+| `#detail-overlay` | Dettaglio build + voto + chip talismani |
 | `#submit-item-overlay` | Form submit item DB (tipo dinamico) |
 | `#edit-user-overlay` | Modifica utente: gamertag, contributor, ruolo (solo admin) |
 | `#delete-user-overlay` | Elimina utente + opzione ban con motivo |
@@ -423,12 +470,14 @@ Visibile a `mod` e `admin`. Tab interni:
 ### db.js — funzioni esportate
 ```
 initSchema()
-listBuilds / getBuild / createBuild / voteBuild / getStats
+listBuilds / getBuild / createBuild / adminUpdateBuild / voteBuild / getStats
 listWeapons / getWeapon / createWeapon
 listArmorPieces / getArmorPiece / createArmorPiece
 listHeroes / getHero / createHero
 listServants / getServant / createServant
 listGloves / getGlove / createGlove
+listTalismans / getTalisman / createTalisman / adminUpdateTalisman
+seedTalismans()
 confirmItem / adminSetStatus
 upsertUser / getUserById / updateGamertag / setContributor / updateUserRole / listUsers
 updateUserDetails / deleteUser / listBannedAccounts / unbanAccount
@@ -436,7 +485,36 @@ updateUserDetails / deleteUser / listBannedAccounts / unbanAccount
 
 ### ITEM_TABLES mapping
 Accetta sia chiavi plurali (da URL route) che singolari (legacy):
-`weapons/weapon → weapons`, `armor/armor_pieces → armor_pieces`, ecc.
+`weapons/weapon → weapons`, `armor/armor_pieces → armor_pieces`, `talisman/talismans → talismans`, ecc.
+
+---
+
+## Talisman Picker (frontend)
+
+### Costanti JS
+```js
+EQUIP_PIECES  // [{ key, icon, label }, ...] — 7 pezzi equipaggiamento
+TALISMAN_TIERS // ['comune','raro','epico','leggendario','unico']
+TALISMAN_CATS  // 10 categorie
+```
+
+### Funzioni JS
+```js
+loadTalismans()           // fetch /api/talismans → window.TALISMANS; chiama initTalismanPicker()
+initTalismanPicker()      // renderizza sezioni per-pezzo in #f-talismans-container
+addTalismanSlot(piece, existing?) // aggiunge slot con 3 select (cat/tipo/tier) + remove btn; max 3 per pezzo
+onTalismanCatChange(catSel)       // aggiorna dropdown tipo al cambio categoria
+updateAddBtnState(piece)          // disabilita btn aggiungi se 3 slot presenti
+getTalismanData()                 // legge DOM → { weapon:[{id,tier},...], ... }
+setTalismanData(data)             // popola DOM da JSON (usato in edit/reset)
+```
+
+### CSS classi talisman
+`.talisman-chip` — chip nel detail modal, colorazione by tier:
+- `.tier-unico` → gold
+- `.tier-leggendario` → viola
+- `.tier-epico` → verde
+- `.tier-raro` → blu
 
 ---
 
@@ -472,13 +550,16 @@ npm run dev   # http://localhost:3000
 - **GAS legacy**: branch `IS_GAS` mantenuto nel frontend, non attivo
 - **Rarità mitico**: solo armi e armature (non eroi/servitori/guanti)
 - **Set bonus armatura**: logica nel simulatore (TBD), non nel DB
+- **owner_id build**: catturato opzionalmente via `parseToken(req)` su POST — nessun 401 se anonimo
+- **equipment_talismans**: JSON text, default `'{}'` — serializzato lato client con `JSON.stringify(getTalismanData())`
+- **seedTalismans**: INSERT OR IGNORE, nessun check count — idempotente su DB già popolato
 
 ---
 
 ## TODO / Prossimi step
 
 - [ ] Setup OAuth: configurare app Discord + Google, impostare secrets su Fly.io
+- [ ] Popolare valori numerici talismani tier per tier (`val_comune`, `val_raro`, ecc.)
 - [ ] Simulatore stat (combina equipaggiamento + set bonus + eroi)
 - [ ] Suggeritore build per modalità
-- [ ] Talismani (schema TBD)
 - [ ] Mod: permessi aggiuntivi (es. edit item altrui)
